@@ -11,7 +11,8 @@
 cd backend && source .venv/bin/activate && uvicorn main:app --reload --port 8002
 
 # After any frontend change, rebuild:
-cd frontend && npm run build
+cd frontend && node node_modules/vite/bin/vite.js build
+# NOTE: npm run build / .bin/vite shim silently exits 0 without building on this machine
 ```
 
 ### Rules

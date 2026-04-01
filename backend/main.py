@@ -1,27 +1,32 @@
-import os
+import shutil
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from models import CollectionStructure, FileContent, ReorderRequest
+from models import CollectionStructure, FileContent, FileNode, ReorderRequest
 from utils import (
-    MARKDOWNS_DIR,
-    ensure_markdowns_dir,
+    PROJECTS_DIR,
+    safe_path,
     get_all_md_files,
     get_orphans,
+    get_collection_file,
+    get_project_md_file,
     load_collection,
     save_collection,
     sync_collection_with_files,
+    flatten_collection,
+    list_projects,
+    create_project,
+    migrate_legacy_data,
     md_to_html,
 )
 
 FRONTEND_DIST = Path(__file__).parent.parent / "frontend" / "dist"
 
-app = FastAPI(title="Markdown Collection Editor", version="1.0.0")
+app = FastAPI(title="Markdown Collection Editor", version="2.0.0")
 
-# CORS only needed in dev when frontend runs on a separate port
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -31,64 +36,118 @@ app.add_middleware(
 )
 
 
-def safe_path(rel_path: str) -> Path:
-    """Resolve and validate that the path stays inside MARKDOWNS_DIR."""
-    full = (MARKDOWNS_DIR / rel_path).resolve()
-    if not str(full).startswith(str(MARKDOWNS_DIR.resolve())):
-        raise HTTPException(status_code=400, detail="Path traversal detected")
-    return full
+@app.on_event("startup")
+def startup():
+    PROJECTS_DIR.mkdir(parents=True, exist_ok=True)
+    migrate_legacy_data()
 
 
-# ── Files ─────────────────────────────────────────────────────────────────────
+# ── Projects ───────────────────────────────────────────────────────────────────
 
-@app.get("/api/files")
-def list_files():
-    """Return flat list of all markdown files with metadata."""
-    ensure_markdowns_dir()
-    return get_all_md_files()
+@app.get("/api/projects")
+def list_projects_endpoint():
+    """Return list of all project names."""
+    return list_projects()
 
 
-@app.get("/api/markdown/{file_path:path}")
-def get_markdown(file_path: str):
-    """Return raw markdown content of a file."""
-    path = safe_path(file_path)
+@app.post("/api/projects/{project_name}")
+def create_project_endpoint(project_name: str):
+    """Create a new project directory."""
+    project_dir = PROJECTS_DIR / project_name
+    if project_dir.exists():
+        raise HTTPException(status_code=409, detail="Project already exists")
+    create_project(project_name)
+    return {"status": "ok", "name": project_name}
+
+
+@app.post("/api/projects/{project_name}/rename")
+def rename_project_endpoint(project_name: str, body: dict):
+    """Rename a project directory."""
+    new_name = body.get("new_name", "").strip()
+    if not new_name or new_name in (".", "..") or "/" in new_name or "\0" in new_name:
+        raise HTTPException(status_code=400, detail="Invalid project name")
+    old_dir = PROJECTS_DIR / project_name
+    new_dir = PROJECTS_DIR / new_name
+    if not old_dir.exists():
+        raise HTTPException(status_code=404, detail="Project not found")
+    if new_dir.exists():
+        raise HTTPException(status_code=409, detail="A project with that name already exists")
+    old_dir.rename(new_dir)
+    return {"status": "ok", "new_name": new_name}
+
+
+@app.delete("/api/projects/{project_name}")
+def delete_project_endpoint(project_name: str):
+    """Delete an entire project directory."""
+    project_dir = PROJECTS_DIR / project_name
+    if not project_dir.exists():
+        raise HTTPException(status_code=404, detail="Project not found")
+    shutil.rmtree(str(project_dir))
+    return {"status": "ok"}
+
+
+@app.get("/api/projects/{project_name}/project-md")
+def get_project_md(project_name: str):
+    """Return the project.md content."""
+    path = get_project_md_file(project_name)
+    if not path.exists():
+        return {"content": f"# {project_name}\n"}
+    return {"content": path.read_text(encoding="utf-8")}
+
+
+@app.put("/api/projects/{project_name}/project-md")
+def save_project_md(project_name: str, body: FileContent):
+    """Save project.md content."""
+    path = get_project_md_file(project_name)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(body.content, encoding="utf-8")
+    return {"status": "ok"}
+
+
+# ── Files ──────────────────────────────────────────────────────────────────────
+
+@app.get("/api/projects/{project_name}/files")
+def list_files(project_name: str):
+    return get_all_md_files(project_name)
+
+
+@app.get("/api/projects/{project_name}/markdown/{file_path:path}")
+def get_markdown(project_name: str, file_path: str):
+    path = safe_path(project_name, file_path)
     if not path.exists():
         raise HTTPException(status_code=404, detail="File not found")
     return {"path": file_path, "content": path.read_text(encoding="utf-8")}
 
 
-@app.post("/api/markdown/{file_path:path}")
-def create_markdown(file_path: str):
-    """Create a new empty markdown file and add it to the collection."""
-    path = safe_path(file_path)
+@app.post("/api/projects/{project_name}/markdown/{file_path:path}")
+def create_markdown(project_name: str, file_path: str):
+    path = safe_path(project_name, file_path)
     if path.exists():
         raise HTTPException(status_code=409, detail="File already exists")
     path.parent.mkdir(parents=True, exist_ok=True)
     title = path.stem.replace("-", " ").replace("_", " ").title()
     path.write_text(f"# {title}\n", encoding="utf-8")
-    # Add to collection
-    collection = load_collection()
-    from models import FileNode
+    collection = load_collection(project_name)
     collection.root.append(FileNode(path=file_path, title=title, order=len(collection.root), children=[]))
-    save_collection(collection)
+    save_collection(project_name, collection)
     return {"status": "ok", "path": file_path, "title": title}
 
 
-@app.delete("/api/markdown/{file_path:path}")
-def delete_markdown(file_path: str):
-    """Delete a markdown file and remove it from the collection."""
-    path = safe_path(file_path)
+@app.put("/api/projects/{project_name}/markdown/{file_path:path}")
+def save_markdown(project_name: str, file_path: str, body: FileContent):
+    path = safe_path(project_name, file_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(body.content, encoding="utf-8")
+    return {"status": "ok"}
+
+
+@app.delete("/api/projects/{project_name}/markdown/{file_path:path}")
+def delete_markdown(project_name: str, file_path: str):
+    path = safe_path(project_name, file_path)
     if path.exists():
         path.unlink()
-    # Remove from collection
-    collection = load_collection()
-    from utils import flatten_collection
-    def remove_from_nodes(nodes):
-        return [
-            {**n.__dict__, "children": remove_from_nodes(n.children or [])}
-            for n in nodes if n.path != file_path
-        ]
-    from models import FileNode
+    collection = load_collection(project_name)
+
     def remove_recursive(nodes):
         result = []
         for n in nodes:
@@ -97,30 +156,22 @@ def delete_markdown(file_path: str):
             n.children = remove_recursive(n.children or [])
             result.append(n)
         return result
+
     collection.root = remove_recursive(collection.root)
-    save_collection(collection)
+    save_collection(project_name, collection)
     return {"status": "ok"}
 
 
-@app.put("/api/markdown/{file_path:path}")
-def save_markdown(file_path: str, body: FileContent):
-    """Save updated markdown content to a file."""
-    path = safe_path(file_path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(body.content, encoding="utf-8")
-
-
-@app.post("/api/rename/{file_path:path}")
-def rename_file(file_path: str, body: dict):
-    """Rename a file and update all references in collection.yaml."""
+@app.post("/api/projects/{project_name}/rename/{file_path:path}")
+def rename_file(project_name: str, file_path: str, body: dict):
     new_path = body.get("new_path", "").strip()
     if not new_path:
         raise HTTPException(status_code=400, detail="new_path is required")
     if not new_path.endswith(".md"):
         new_path += ".md"
 
-    old = safe_path(file_path)
-    new = safe_path(new_path)
+    old = safe_path(project_name, file_path)
+    new = safe_path(project_name, new_path)
     if not old.exists():
         raise HTTPException(status_code=404, detail="File not found")
     if new.exists():
@@ -128,23 +179,22 @@ def rename_file(file_path: str, body: dict):
 
     old.rename(new)
 
-    # Update path in collection.yaml (keep title/children intact)
-    collection = load_collection()
+    collection = load_collection(project_name)
+
     def rename_in_nodes(nodes):
         for n in nodes:
             if n.path == file_path:
                 n.path = new_path
             rename_in_nodes(n.children or [])
+
     rename_in_nodes(collection.root)
-    save_collection(collection)
+    save_collection(project_name, collection)
     return {"status": "ok", "old_path": file_path, "new_path": new_path}
-    return {"status": "ok", "path": file_path}
 
 
-@app.get("/api/html/{file_path:path}", response_class=HTMLResponse)
-def get_html(file_path: str):
-    """Convert a markdown file to HTML and return it."""
-    path = safe_path(file_path)
+@app.get("/api/projects/{project_name}/html/{file_path:path}", response_class=HTMLResponse)
+def get_html(project_name: str, file_path: str):
+    path = safe_path(project_name, file_path)
     if not path.exists():
         raise HTTPException(status_code=404, detail="File not found")
     content = path.read_text(encoding="utf-8")
@@ -169,63 +219,54 @@ def get_html(file_path: str):
 
 # ── Collection ─────────────────────────────────────────────────────────────────
 
-@app.get("/api/collection")
-def get_collection():
-    """Return the hierarchical collection structure, synced with disk."""
-    collection = load_collection()
-    collection = sync_collection_with_files(collection)
+@app.get("/api/projects/{project_name}/collection")
+def get_collection(project_name: str):
+    collection = load_collection(project_name)
+    collection = sync_collection_with_files(project_name, collection)
     return collection
 
 
-@app.get("/api/orphans")
-def list_orphans():
-    """Return files on disk that are not in the collection hierarchy."""
-    collection = load_collection()
-    collection = sync_collection_with_files(collection)
-    return get_orphans(collection)
+@app.get("/api/projects/{project_name}/orphans")
+def list_orphans(project_name: str):
+    collection = load_collection(project_name)
+    collection = sync_collection_with_files(project_name, collection)
+    return get_orphans(project_name, collection)
 
 
-@app.put("/api/collection")
-def update_collection(body: ReorderRequest):
-    """Persist an updated hierarchical collection."""
-    save_collection(body.collection)
+@app.put("/api/projects/{project_name}/collection")
+def update_collection(project_name: str, body: ReorderRequest):
+    save_collection(project_name, body.collection)
     return {"status": "ok"}
 
 
-@app.get("/api/collection/yaml")
-def get_collection_yaml():
-    """Return the raw collection.yaml text."""
-    from utils import COLLECTION_FILE
-    import yaml as _yaml
-    if not COLLECTION_FILE.exists():
-        collection = load_collection()
-        save_collection(collection)
-    return {"content": COLLECTION_FILE.read_text(encoding="utf-8")}
+@app.get("/api/projects/{project_name}/collection/yaml")
+def get_collection_yaml(project_name: str):
+    collection_file = get_collection_file(project_name)
+    if not collection_file.exists():
+        save_collection(project_name, load_collection(project_name))
+    return {"content": collection_file.read_text(encoding="utf-8")}
 
 
-@app.put("/api/collection/yaml")
-def save_collection_yaml(body: dict):
-    """Accept raw YAML text, validate it, and save."""
+@app.put("/api/projects/{project_name}/collection/yaml")
+def save_collection_yaml(project_name: str, body: dict):
     import yaml as _yaml
-    from utils import COLLECTION_FILE
+    collection_file = get_collection_file(project_name)
     raw = body.get("content", "")
     try:
         data = _yaml.safe_load(raw)
-        # Validate structure
         CollectionStructure(**data)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Invalid YAML: {e}")
-    COLLECTION_FILE.write_text(raw, encoding="utf-8")
+    collection_file.write_text(raw, encoding="utf-8")
     return {"status": "ok"}
 
 
 # ── Serve frontend ─────────────────────────────────────────────────────────────
-# Mount static assets (JS/CSS chunks) — must come after all /api routes
+
 if FRONTEND_DIST.exists():
     app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")
 
     @app.get("/{full_path:path}", include_in_schema=False)
     def serve_spa(full_path: str):
-        """Catch-all: serve index.html for any non-API path (SPA routing)."""
         index = FRONTEND_DIST / "index.html"
         return FileResponse(str(index), headers={"Cache-Control": "no-cache, no-store, must-revalidate"})

@@ -13,7 +13,7 @@ if [ ! -d "node_modules" ]; then
   echo "    Installing npm packages..."
   npm install
 fi
-npm run build
+node node_modules/vite/bin/vite.js build
 
 # Start backend (serves API + built frontend)
 echo ""

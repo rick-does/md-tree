@@ -13,3 +13,8 @@ export interface FileInfo {
   path: string;
   title: string;
 }
+
+export interface ProjectInfo {
+  name: string;
+  title: string;
+}

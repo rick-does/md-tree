@@ -17,7 +17,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { FileNode, CollectionStructure, FileInfo } from "../types";
+import { FileNode, CollectionStructure, FileInfo, ProjectInfo } from "../types";
 import {
   flatIds,
   removeNode,
@@ -138,43 +138,6 @@ function ConnectorLines({ depth, ancestors, isLast }: { depth: number; ancestors
   );
 }
 
-// ── Chip action icons (pencil + trash) ────────────────────────────────────────
-
-function ChipActions({ path, isSelected, onOpen, onDelete }: {
-  path: string;
-  isSelected: boolean;
-  onOpen: (p: string) => void;
-  onDelete: (p: string) => void;
-}) {
-  const base: CSSProperties = {
-    flexShrink: 0, display: "flex", alignItems: "center",
-    borderRadius: "3px", cursor: "pointer",
-    color: isSelected ? "rgba(255,255,255,0.7)" : "#aaa",
-  };
-  return (
-    <>
-      <span
-        onClick={(e) => { e.stopPropagation(); onOpen(path); }}
-        title="Edit file"
-        style={base}
-        onMouseEnter={(e) => (e.currentTarget.style.color = isSelected ? "#fff" : "#1a6fa8")}
-        onMouseLeave={(e) => (e.currentTarget.style.color = isSelected ? "rgba(255,255,255,0.7)" : "#aaa")}
-      >
-        <PencilIcon />
-      </span>
-      <span
-        onClick={(e) => { e.stopPropagation(); onDelete(path); }}
-        title="Delete file"
-        style={{ ...base, marginLeft: "5px" }}
-        onMouseEnter={(e) => (e.currentTarget.style.color = isSelected ? "#fff" : "#f66")}
-        onMouseLeave={(e) => (e.currentTarget.style.color = isSelected ? "rgba(255,255,255,0.7)" : "#aaa")}
-      >
-        <TrashIcon />
-      </span>
-    </>
-  );
-}
-
 // ── OrphanItem ────────────────────────────────────────────────────────────────
 
 interface OrphanItemProps {
@@ -190,38 +153,51 @@ interface OrphanItemProps {
 function OrphanItem({ path, title, titleMode, selectedPath, onSelect, onOpen, onDelete }: OrphanItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: path });
   const [hovered, setHovered] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const isSelected = selectedPath === path;
   const label = titleMode ? title : path;
 
+  const mi: CSSProperties = { padding: "7px 14px", fontSize: "13px", cursor: "pointer", color: "#1a1a1a", whiteSpace: "nowrap" };
+
   return (
     <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.35 : 1, margin: `${GAP}px 0` }}>
-      <div
-        style={{
-          display: "inline-flex", alignItems: "stretch",
-          width: "2.5in", overflow: "hidden",
-          background: isSelected ? "#ff8c00" : hovered ? "#fff5eb" : "#fff",
-          border: "1.5px solid #ff8c00", borderRadius: "6px",
-          cursor: "pointer", userSelect: "none",
-        }}
-        onClick={() => onSelect(path)}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-      >
-        {/* Full-height grab zone */}
+      <div style={{ position: "relative", display: "inline-block" }}>
         <div
-          {...attributes} {...listeners}
-          onClick={(e) => { e.stopPropagation(); onSelect(path); }}
-          style={{ cursor: "grab", display: "flex", alignItems: "center", padding: "10px 6px 10px 8px", flexShrink: 0, background: "#ff8c00", color: "#fff", fontSize: "11px", fontWeight: "bold", borderRadius: "4px 0 0 4px" }}
-          title="Drag into hierarchy"
-        >⠿</div>
-        <div style={{ width: "1px", background: isSelected ? "rgba(255,255,255,0.3)" : "#e0e0e0", flexShrink: 0, margin: "10px 2px" }} />
-        {/* Content */}
-        <div style={{ display: "flex", alignItems: "center", flex: 1, minWidth: 0, gap: "4px", padding: "10px 10px 10px 6px" }}>
-          <span style={{ fontSize: "15px", fontWeight: 500, fontStyle: "italic", color: isSelected ? "#fff" : "#555", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }} title={label}>
-            {label}
-          </span>
-          <ChipActions path={path} isSelected={isSelected} onOpen={onOpen} onDelete={onDelete} />
+          style={{
+            display: "inline-flex", alignItems: "stretch",
+            width: "2.5in", overflow: "visible",
+            background: isSelected ? "#ff8c00" : hovered ? "#fff5eb" : "#fff",
+            border: "1.5px solid #ff8c00", borderRadius: "6px",
+            cursor: "pointer", userSelect: "none",
+          }}
+          onClick={() => onSelect(path)}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+        >
+          <div
+            {...attributes} {...listeners}
+            onClick={(e) => { e.stopPropagation(); onSelect(path); }}
+            style={{ cursor: "grab", display: "flex", alignItems: "center", padding: "10px 6px 10px 8px", flexShrink: 0, background: "#ff8c00", color: "#fff", fontSize: "16px", fontWeight: "bold", borderRadius: "4px 0 0 4px" }}
+          >⠿</div>
+          <div style={{ display: "flex", alignItems: "center", flex: 1, minWidth: 0, gap: "2px", padding: "10px 6px 10px 3px" }}>
+            <span style={{ fontSize: "15px", fontWeight: 500, fontStyle: "italic", color: isSelected ? "#fff" : "#555", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }} title={label}>
+              {label}
+            </span>
+            <span
+              onClick={(e) => { e.stopPropagation(); setMenuOpen(o => !o); }}
+              style={{ flexShrink: 0, cursor: "pointer", fontSize: "16px", fontWeight: "bold", color: isSelected ? "rgba(255,255,255,0.7)" : "#bbb", padding: "0 2px", lineHeight: 1 }}
+            >⋮</span>
+          </div>
         </div>
+        {menuOpen && (
+          <>
+            <div style={{ position: "fixed", inset: 0, zIndex: 99 }} onClick={() => setMenuOpen(false)} />
+            <div style={{ position: "absolute", top: "100%", right: 0, zIndex: 100, background: "#fff", border: "1px solid #d0e8f7", borderRadius: "6px", boxShadow: "0 4px 16px rgba(0,0,0,0.12)", minWidth: "140px", overflow: "hidden" }}>
+              <div style={mi} onClick={() => { onOpen(path); setMenuOpen(false); }} onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#f5f5f5"; }} onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = ""; }}>Edit</div>
+              <div style={{ ...mi, color: "#c00" }} onClick={() => { onDelete(path); setMenuOpen(false); }} onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#fff5f5"; }} onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = ""; }}>Delete</div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -240,6 +216,7 @@ interface ItemProps {
   onOpen: (path: string) => void;
   onDelete: (path: string) => void;
   onRename: (path: string, newName: string) => void;
+  onCreateChild: (parentPath: string, filename: string) => Promise<void>;
   expanded: Set<string>;
   toggleExpand: (path: string) => void;
   overId: string | null;
@@ -247,10 +224,16 @@ interface ItemProps {
   dragDeltaX: number;
 }
 
-function SortableItem({ node, depth, isLast, ancestors, selectedPath, titleMode, onSelect, onOpen, onDelete, onRename, expanded, toggleExpand, overId, activeId, dragDeltaX }: ItemProps) {
+function SortableItem({ node, depth, isLast, ancestors, selectedPath, titleMode, onSelect, onOpen, onDelete, onRename, onCreateChild, expanded, toggleExpand, overId, activeId, dragDeltaX }: ItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: node.path });
   const [renaming, setRenaming] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [addingChild, setAddingChild] = useState(false);
+  const [childName, setChildName] = useState("");
+  const [childError, setChildError] = useState("");
+  const childInputRef = useRef<HTMLInputElement>(null);
+
   const isExpanded = expanded.has(node.path);
   const hasChildren = (node.children ?? []).length > 0;
   const isSelected = selectedPath === node.path;
@@ -261,17 +244,30 @@ function SortableItem({ node, depth, isLast, ancestors, selectedPath, titleMode,
     ? dragDeltaX > 30 ? "nest" : dragDeltaX < -30 ? "unnest" : "sibling"
     : null;
 
+  const submitChild = async () => {
+    let name = childName.trim();
+    if (!name) return;
+    if (!name.endsWith(".md")) name += ".md";
+    if (/[/\\<>:"|?*]/.test(name.replace(/\.md$/, ""))) { setChildError("Invalid filename"); return; }
+    try {
+      await onCreateChild(node.path, name);
+      setAddingChild(false);
+      setChildName("");
+      setChildError("");
+    } catch (e: any) { setChildError(e.message ?? "Error"); }
+  };
+
+  const mi: CSSProperties = { padding: "7px 14px", fontSize: "13px", cursor: "pointer", color: "#1a1a1a", whiteSpace: "nowrap" };
+
   return (
     <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.35 : 1, margin: `${GAP}px 0` }}>
       <div style={{ display: "flex", alignItems: "stretch" }}>
-        {/* Tree connector lines */}
         <ConnectorLines depth={depth} ancestors={ancestors} isLast={isLast} />
-        {/* Chip + drop indicators */}
-        <div style={{ minWidth: 0 }}>
+        <div style={{ minWidth: 0, position: "relative" }}>
           <div
             style={{
               display: "inline-flex", alignItems: "stretch",
-              width: "2.5in", overflow: "hidden",
+              width: "2.5in", overflow: "visible",
               background: isSelected ? "#ff8c00" : hovered ? "#fff5eb" : "#fff",
               border: `1.5px solid ${dropAction === "nest" ? "#4caf50" : "#ff8c00"}`,
               borderRadius: "6px", cursor: "pointer", userSelect: "none",
@@ -282,29 +278,21 @@ function SortableItem({ node, depth, isLast, ancestors, selectedPath, titleMode,
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
           >
-            {/* Full-height grab zone */}
+            {/* Grab zone */}
             <div
               {...attributes} {...listeners}
               onClick={(e) => { e.stopPropagation(); onSelect(node.path); }}
-              style={{ cursor: "grab", display: "flex", alignItems: "center", padding: "10px 6px 10px 8px", flexShrink: 0, background: "#ff8c00", color: "#fff", fontSize: "11px", fontWeight: "bold", borderRadius: "4px 0 0 4px" }}
-              title="Drag to reorder"
+              style={{ cursor: "grab", display: "flex", alignItems: "center", padding: "10px 6px 10px 8px", flexShrink: 0, background: "#ff8c00", color: "#fff", fontSize: "16px", fontWeight: "bold", borderRadius: "4px 0 0 4px" }}
             >⠿</div>
-            {/* Separator */}
-            <div style={{ width: "1px", background: isSelected ? "rgba(255,255,255,0.3)" : "#e0e0e0", flexShrink: 0, margin: "10px 2px" }} />
             {/* Content */}
-            <div style={{ display: "flex", alignItems: "center", flex: 1, minWidth: 0, gap: "4px", padding: "10px 10px 10px 6px" }}>
-              {/* Expand toggle */}
+            <div style={{ display: "flex", alignItems: "center", flex: 1, minWidth: 0, gap: "2px", padding: "10px 6px 10px 3px" }}>
               {hasChildren ? (
-                <span
-                  onClick={(e) => { e.stopPropagation(); toggleExpand(node.path); }}
-                  style={{ color: isSelected ? "#fff" : "#aaa", fontSize: "11px", width: "12px", flexShrink: 0 }}
-                >
+                <span onClick={(e) => { e.stopPropagation(); toggleExpand(node.path); }} style={{ color: isSelected ? "#fff" : "#aaa", fontSize: "11px", width: "6px", flexShrink: 0 }}>
                   {isExpanded ? "▾" : "▸"}
                 </span>
               ) : (
-                <span style={{ width: "12px", flexShrink: 0 }} />
+                <span style={{ width: "6px", flexShrink: 0 }} />
               )}
-              {/* Label or rename input */}
               {renaming ? (
                 <RenameInput
                   currentPath={node.path}
@@ -320,12 +308,49 @@ function SortableItem({ node, depth, isLast, ancestors, selectedPath, titleMode,
                   {label}
                 </span>
               )}
-              {dropAction === "nest" && (
-                <span style={{ fontSize: "10px", color: "#4caf50", flexShrink: 0 }}>nest ▸</span>
-              )}
-              <ChipActions path={node.path} isSelected={isSelected} onOpen={onOpen} onDelete={onDelete} />
+              {dropAction === "nest" && <span style={{ fontSize: "10px", color: "#4caf50", flexShrink: 0 }}>nest ▸</span>}
+              {/* ⋮ menu button */}
+              <span
+                onClick={(e) => { e.stopPropagation(); setMenuOpen(o => !o); }}
+                style={{ flexShrink: 0, cursor: "pointer", fontSize: "16px", fontWeight: "bold", color: isSelected ? "rgba(255,255,255,0.7)" : "#bbb", padding: "0 2px", lineHeight: 1 }}
+              >⋮</span>
             </div>
           </div>
+
+          {/* Chip menu dropdown */}
+          {menuOpen && (
+            <>
+              <div style={{ position: "fixed", inset: 0, zIndex: 99 }} onClick={() => setMenuOpen(false)} />
+              <div style={{ position: "absolute", top: "100%", right: 0, zIndex: 100, background: "#fff", border: "1px solid #d0e8f7", borderRadius: "6px", boxShadow: "0 4px 16px rgba(0,0,0,0.12)", minWidth: "150px", overflow: "hidden" }}>
+                <div style={mi} onClick={() => { onOpen(node.path); setMenuOpen(false); }} onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#f5f5f5"; }} onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = ""; }}>Edit</div>
+                <div style={mi} onClick={() => { setAddingChild(true); setChildName(""); setChildError(""); setMenuOpen(false); setTimeout(() => childInputRef.current?.focus(), 50); }} onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#f5f5f5"; }} onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = ""; }}>Add sub-page</div>
+                <div style={{ ...mi, color: "#c00" }} onClick={() => { onDelete(node.path); setMenuOpen(false); }} onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#fff5f5"; }} onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = ""; }}>Delete</div>
+              </div>
+            </>
+          )}
+
+          {/* Add sub-page inline input */}
+          {addingChild && (
+            <div style={{ marginTop: "4px", display: "flex", flexDirection: "column", gap: "3px" }}>
+              <div style={{ display: "flex", gap: "4px" }}>
+                <input
+                  ref={childInputRef}
+                  value={childName}
+                  onChange={(e) => { setChildName(e.target.value); setChildError(""); }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") submitChild();
+                    if (e.key === "Escape") { setAddingChild(false); setChildName(""); setChildError(""); }
+                  }}
+                  placeholder="filename.md"
+                  style={{ padding: "4px 6px", background: "#fff", border: "1px solid #b3d9f7", borderRadius: "3px", color: "#1a1a1a", fontSize: "12px", outline: "none", width: "140px" }}
+                />
+                <button onClick={submitChild} style={{ padding: "4px 8px", background: "#3a7d44", border: "none", borderRadius: "3px", color: "#fff", fontSize: "12px", cursor: "pointer" }}>✓</button>
+                <button onClick={() => { setAddingChild(false); setChildName(""); setChildError(""); }} style={{ padding: "4px 8px", background: "#aaa", border: "none", borderRadius: "3px", color: "#fff", fontSize: "12px", cursor: "pointer" }}>✕</button>
+              </div>
+              {childError && <div style={{ color: "#f66", fontSize: "11px" }}>{childError}</div>}
+            </div>
+          )}
+
           {dropAction === "sibling" && <div style={{ height: "2px", background: "#6b8cff", borderRadius: "1px", margin: "0 4px" }} />}
           {dropAction === "unnest" && <div style={{ height: "2px", background: "#ff9800", borderRadius: "1px", margin: "0 4px" }} />}
         </div>
@@ -346,6 +371,7 @@ function SortableItem({ node, depth, isLast, ancestors, selectedPath, titleMode,
               onOpen={onOpen}
               onDelete={onDelete}
               onRename={onRename}
+              onCreateChild={onCreateChild}
               expanded={expanded}
               toggleExpand={toggleExpand}
               overId={overId}
@@ -370,12 +396,21 @@ interface SidebarProps {
   onCreateFile: (filename: string) => Promise<void>;
   onDeleteFile: (path: string) => Promise<void>;
   onRenameFile: (oldPath: string, newName: string) => Promise<void>;
+  onCreateChildFile: (parentPath: string, filename: string) => Promise<void>;
   onOpenYaml: () => void;
   yamlOpen: boolean;
   orphans: FileInfo[];
+  currentProject: string;
+  currentProjectTitle: string;
+  projects: ProjectInfo[];
+  onSwitchProject: (name: string) => void;
+  onCreateProject: (name: string) => Promise<void>;
+  onDeleteProject: (name: string) => Promise<void>;
+  onRenameProject: (oldName: string, newName: string) => Promise<void>;
+  onOpenProjectMd: () => void;
 }
 
-export default function Sidebar({ collection, selectedPath, onSelect, onOpen, onCollectionChange, onCreateFile, onDeleteFile, onRenameFile, onOpenYaml, yamlOpen, orphans }: SidebarProps) {
+export default function Sidebar({ collection, selectedPath, onSelect, onOpen, onCollectionChange, onCreateFile, onDeleteFile, onRenameFile, onCreateChildFile, onOpenYaml, yamlOpen, orphans, currentProject, currentProjectTitle, projects, onSwitchProject, onCreateProject, onDeleteProject, onRenameProject, onOpenProjectMd }: SidebarProps) {
   const [titleMode, setTitleMode] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(flatIds(collection.root)));
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -483,55 +518,236 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
 
   const allIds = [...flatIds(collection.root), ...orphans.map(o => o.path)];
 
+  // ── Project rename ────────────────────────────────────────────────────────
+  const [renamingProject, setRenamingProject] = useState(false);
+  const [renameProjectValue, setRenameProjectValue] = useState("");
+  const [renameProjectError, setRenameProjectError] = useState("");
+  const renameProjectInputRef = useRef<HTMLInputElement>(null);
+
+  const normalizeProjectName = (raw: string) =>
+    raw.trim().replace(/\s+/g, "-").replace(/[/\\<>:"|?*\0]/g, "");
+
+  const commitRenameProject = async () => {
+    const name = normalizeProjectName(renameProjectValue);
+    if (!name || name === "." || name === "..") { setRenameProjectError("Invalid name"); return; }
+    if (name === currentProject) { setRenamingProject(false); return; }
+    try {
+      await onRenameProject(currentProject, name);
+      setRenamingProject(false);
+      setRenameProjectError("");
+    } catch (e: any) { setRenameProjectError(e.message ?? "Error"); }
+  };
+
+  // ── Three-dot menu ────────────────────────────────────────────────────────
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [projectSubmenuOpen, setProjectSubmenuOpen] = useState(false);
+  const menuRef = useRef<HTMLSpanElement>(null);
+  const [creatingProject, setCreatingProject] = useState(false);
+  const [newProjectName, setNewProjectName] = useState("");
+  const [projectError, setProjectError] = useState("");
+  const projectInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [menuOpen]);
+
+  const cancelCreatingProject = () => { setCreatingProject(false); setNewProjectName(""); setProjectError(""); };
+  const submitNewProject = async () => {
+    const name = newProjectName.trim().replace(/\s+/g, "-").toLowerCase();
+    if (!name) return;
+    if (/[/\\<>:"|?*]/.test(name)) { setProjectError("Invalid name"); return; }
+    try { await onCreateProject(name); cancelCreatingProject(); }
+    catch (e: any) { setProjectError(e.message ?? "Error"); }
+  };
+  const handleProjectInputKey = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") submitNewProject();
+    if (e.key === "Escape") cancelCreatingProject();
+  };
+
+  const menuItem: CSSProperties = {
+    display: "flex", alignItems: "center", gap: "8px",
+    padding: "7px 14px", fontSize: "13px", cursor: "pointer",
+    color: "#1a1a1a", whiteSpace: "nowrap",
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "#ffffff", marginLeft: "1in", marginRight: "1in" }}>
-      {/* Toolbar */}
-      <div style={{ padding: "8px 0", borderBottom: "1px solid #d0e8f7", display: "flex", alignItems: "center", gap: "8px" }}>
-        <button onClick={onOpenYaml} style={{ padding: "5px 10px", background: yamlOpen ? "#b3d9f7" : "#e8f4fd", border: `1px solid ${yamlOpen ? "#1a6fa8" : "#b3d9f7"}`, borderRadius: "4px", color: "#1a6fa8", fontSize: "12px", cursor: "pointer", flexShrink: 0 }}>
-          {"{ }"} YAML
-        </button>
-        <div style={{ display: "flex", border: "1px solid #b3d9f7", borderRadius: "4px", overflow: "hidden", flexShrink: 0 }}>
-          {([["Filename", false], ["Title", true]] as const).map(([label, mode]) => (
-            <button key={label} onClick={() => setTitleMode(mode)} style={{ padding: "4px 9px", border: "none", cursor: "pointer", fontSize: "12px", background: titleMode === mode ? "#1a6fa8" : "#e8f4fd", color: titleMode === mode ? "#fff" : "#1a6fa8" }}>
-              {label}
-            </button>
-          ))}
-        </div>
-        <div style={{ flex: 1 }} />
-        {!creatingFile ? (
-          <button onClick={startCreating} style={{ padding: "5px 13px", background: "#e8f4fd", border: "1px solid #b3d9f7", borderRadius: "4px", color: "#1a6fa8", fontSize: "12px", cursor: "pointer", flexShrink: 0 }}>
-            + New file
-          </button>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-            <div style={{ display: "flex", gap: "4px" }}>
-              <input ref={inputRef} value={newFileName} onChange={(e) => { setNewFileName(e.target.value); setCreateError(""); }} onKeyDown={handleInputKey} placeholder="filename.md"
-                style={{ flex: 1, padding: "4px 6px", background: "#fff", border: "1px solid #b3d9f7", borderRadius: "3px", color: "#1a1a1a", fontSize: "12px", outline: "none" }} />
-              <button onClick={submitNewFile} style={{ padding: "4px 8px", background: "#3a7d44", border: "none", borderRadius: "3px", color: "#fff", fontSize: "12px", cursor: "pointer" }}>✓</button>
-              <button onClick={cancelCreating} style={{ padding: "4px 8px", background: "#aaa", border: "none", borderRadius: "3px", color: "#fff", fontSize: "12px", cursor: "pointer" }}>✕</button>
-            </div>
-            {createError && <div style={{ color: "#f66", fontSize: "11px", marginTop: "3px" }}>{createError}</div>}
-          </div>
-        )}
-      </div>
 
       {/* File tree */}
       <div style={{ flex: 1, overflowY: "auto", paddingTop: "8px", paddingBottom: "8px", outline: "none" }} tabIndex={0} onKeyDown={handleKeyDown}>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragMove={handleDragMove} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
           <SortableContext items={allIds} strategy={verticalListSortingStrategy}>
+
+            {/* Project chip — always at top, non-draggable */}
+            {currentProject && (
+              <div style={{ margin: `${GAP}px 0` }}>
+                {/* Chip */}
+                <div style={{
+                  display: "inline-flex", alignItems: "center",
+                  width: "2.5in",
+                  background: "#1a6fa8", borderRadius: "6px",
+                  padding: "10px 8px 10px 12px",
+                  userSelect: "none",
+                }}>
+                  {renamingProject ? (
+                    <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+                      <input
+                        ref={renameProjectInputRef}
+                        value={renameProjectValue}
+                        autoFocus
+                        onChange={(e) => { setRenameProjectValue(e.target.value); setRenameProjectError(""); }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") { e.stopPropagation(); commitRenameProject(); }
+                          if (e.key === "Escape") { e.stopPropagation(); setRenamingProject(false); setRenameProjectError(""); }
+                        }}
+                        onBlur={commitRenameProject}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ background: "#fff", border: "none", borderRadius: "3px", color: "#1a1a1a", fontSize: "13px", padding: "2px 5px", outline: "none", width: "100%" }}
+                      />
+                      {renameProjectError && <span style={{ color: "#fca", fontSize: "10px" }}>{renameProjectError}</span>}
+                    </div>
+                  ) : (
+                    <span
+                      style={{ fontSize: "15px", fontWeight: 600, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, cursor: "text" }}
+                      title={titleMode ? currentProjectTitle : currentProject}
+                      onDoubleClick={() => { setRenameProjectValue(currentProject); setRenameProjectError(""); setRenamingProject(true); }}
+                    >
+                      {titleMode ? currentProjectTitle : currentProject}
+                    </span>
+                  )}
+                  {/* ⋮ button — position:relative so dropdown anchors to its center */}
+                  <span ref={menuRef} style={{ position: "relative", flexShrink: 0 }}>
+                    <span
+                      onClick={() => setMenuOpen(o => !o)}
+                      title="Menu"
+                      style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "24px", height: "24px", borderRadius: "4px", cursor: "pointer", fontSize: "18px", fontWeight: "bold", color: menuOpen ? "#fff" : "rgba(255,255,255,0.65)", background: menuOpen ? "rgba(255,255,255,0.2)" : "transparent" }}
+                      onMouseEnter={(e) => { if (!menuOpen) e.currentTarget.style.color = "#fff"; }}
+                      onMouseLeave={(e) => { if (!menuOpen) e.currentTarget.style.color = "rgba(255,255,255,0.65)"; }}
+                    >⋮</span>
+
+                    {/* Dropdown — top-left corner at center of ⋮ button */}
+                    {menuOpen && (
+                      <div style={{
+                        position: "absolute", top: "50%", left: "50%", zIndex: 100,
+                        background: "#fff", border: "1px solid #d0e8f7", borderRadius: "6px",
+                        boxShadow: "0 4px 16px rgba(0,0,0,0.12)", minWidth: "200px", overflow: "visible",
+                      }}>
+                        {/* Projects fly-out */}
+                        <div
+                          style={{ ...menuItem, justifyContent: "space-between", position: "relative" }}
+                          onMouseEnter={() => setProjectSubmenuOpen(true)}
+                          onMouseLeave={() => setProjectSubmenuOpen(false)}
+                        >
+                          <span>Projects</span>
+                          <span style={{ fontSize: "11px", color: "#999" }}>▸</span>
+                          {projectSubmenuOpen && (
+                            <div style={{
+                              position: "absolute", left: "100%", top: 0, zIndex: 101,
+                              background: "#fff", border: "1px solid #d0e8f7", borderRadius: "6px",
+                              boxShadow: "0 4px 16px rgba(0,0,0,0.12)", minWidth: "160px", overflow: "hidden",
+                            }}>
+                              {projects.map(p => (
+                                <div key={p.name}
+                                  style={{ ...menuItem, background: p.name === currentProject ? "#e8f4fd" : "transparent", color: p.name === currentProject ? "#1a6fa8" : "#1a1a1a", fontWeight: p.name === currentProject ? 600 : 400 }}
+                                  onClick={() => { onSwitchProject(p.name); setMenuOpen(false); setProjectSubmenuOpen(false); }}
+                                  onMouseEnter={(e) => { if (p.name !== currentProject) (e.currentTarget as HTMLDivElement).style.background = "#f5f5f5"; }}
+                                  onMouseLeave={(e) => { if (p.name !== currentProject) (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
+                                >
+                                  {p.name === currentProject && <span style={{ color: "#1a6fa8", fontSize: "11px", marginRight: "4px" }}>✓</span>}{titleMode ? p.title : p.name}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Info */}
+                        <div style={{ ...menuItem }}
+                          onClick={() => { onOpenProjectMd(); setMenuOpen(false); }}
+                          onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#f5f5f5"; }}
+                          onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
+                        >Info</div>
+
+                        <div style={{ height: "1px", background: "#e8f4fd", margin: "4px 0" }} />
+
+                        {/* New project */}
+                        <div style={{ ...menuItem, color: "#1a6fa8" }}
+                          onClick={() => { setCreatingProject(true); setNewProjectName(""); setProjectError(""); setMenuOpen(false); setTimeout(() => projectInputRef.current?.focus(), 50); }}
+                          onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#f5f5f5"; }}
+                          onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
+                        >＋ New project</div>
+
+                        {/* New file */}
+                        <div style={{ ...menuItem, color: "#1a6fa8" }}
+                          onClick={() => { startCreating(); setMenuOpen(false); }}
+                          onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#f5f5f5"; }}
+                          onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
+                        >＋ New file</div>
+
+                        <div style={{ height: "1px", background: "#e8f4fd", margin: "4px 0" }} />
+
+                        {/* Labels */}
+                        <div style={{ padding: "4px 14px 10px", display: "flex", alignItems: "center", gap: "8px" }}>
+                          <span style={{ fontSize: "12px", color: "#666" }}>Labels:</span>
+                          <div style={{ display: "flex", border: "1px solid #b3d9f7", borderRadius: "4px", overflow: "hidden" }}>
+                            {([["Filename", false], ["Title", true]] as const).map(([label, mode]) => (
+                              <button key={label} onClick={() => { setTitleMode(mode); setMenuOpen(false); }} style={{ padding: "3px 8px", border: "none", cursor: "pointer", fontSize: "12px", background: titleMode === mode ? "#1a6fa8" : "#e8f4fd", color: titleMode === mode ? "#fff" : "#1a6fa8" }}>
+                                {label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </span>
+                </div>
+
+                {/* Inline new-project input (shown below chip when creating) */}
+                {creatingProject && (
+                  <div style={{ marginTop: "6px", display: "flex", flexDirection: "column", gap: "3px" }}>
+                    <div style={{ display: "flex", gap: "4px" }}>
+                      <input ref={projectInputRef} value={newProjectName} onChange={(e) => { setNewProjectName(e.target.value); setProjectError(""); }} onKeyDown={handleProjectInputKey} placeholder="project-name"
+                        style={{ padding: "4px 6px", background: "#fff", border: "1px solid #b3d9f7", borderRadius: "3px", color: "#1a1a1a", fontSize: "12px", outline: "none", width: "140px" }} />
+                      <button onClick={submitNewProject} style={{ padding: "4px 8px", background: "#3a7d44", border: "none", borderRadius: "3px", color: "#fff", fontSize: "12px", cursor: "pointer" }}>✓</button>
+                      <button onClick={cancelCreatingProject} style={{ padding: "4px 8px", background: "#aaa", border: "none", borderRadius: "3px", color: "#fff", fontSize: "12px", cursor: "pointer" }}>✕</button>
+                    </div>
+                    {projectError && <div style={{ color: "#f66", fontSize: "11px" }}>{projectError}</div>}
+                  </div>
+                )}
+
+                {/* Inline new-file input */}
+                {creatingFile && (
+                  <div style={{ marginTop: "6px", display: "flex", flexDirection: "column", gap: "3px" }}>
+                    <div style={{ display: "flex", gap: "4px" }}>
+                      <input ref={inputRef} value={newFileName} onChange={(e) => { setNewFileName(e.target.value); setCreateError(""); }} onKeyDown={handleInputKey} placeholder="filename.md"
+                        style={{ padding: "4px 6px", background: "#fff", border: "1px solid #b3d9f7", borderRadius: "3px", color: "#1a1a1a", fontSize: "12px", outline: "none", width: "140px" }} />
+                      <button onClick={submitNewFile} style={{ padding: "4px 8px", background: "#3a7d44", border: "none", borderRadius: "3px", color: "#fff", fontSize: "12px", cursor: "pointer" }}>✓</button>
+                      <button onClick={cancelCreating} style={{ padding: "4px 8px", background: "#aaa", border: "none", borderRadius: "3px", color: "#fff", fontSize: "12px", cursor: "pointer" }}>✕</button>
+                    </div>
+                    {createError && <div style={{ color: "#f66", fontSize: "11px" }}>{createError}</div>}
+                  </div>
+                )}
+              </div>
+            )}
+
             {collection.root.map((node, idx) => (
               <SortableItem
                 key={node.path}
                 node={node}
-                depth={0}
+                depth={1}
                 isLast={idx === collection.root.length - 1}
-                ancestors={[]}
+                ancestors={[false]}
                 selectedPath={selectedPath}
                 titleMode={titleMode}
                 onSelect={onSelect}
                 onOpen={onOpen}
                 onDelete={handleDelete}
                 onRename={onRenameFile}
+                onCreateChild={onCreateChildFile}
                 expanded={expanded}
                 toggleExpand={toggleExpand}
                 overId={overId}
@@ -542,7 +758,7 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
 
             {collection.root.length === 0 && orphans.length === 0 && (
               <div style={{ color: "#aaa", padding: "16px", fontSize: "13px", textAlign: "center" }}>
-                No markdown files found in ./markdowns
+                No markdown files yet. Create one with + New file.
               </div>
             )}
 

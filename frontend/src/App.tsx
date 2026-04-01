@@ -2,54 +2,122 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Sidebar from "./components/Sidebar";
 import MarkdownEditor from "./components/MarkdownEditor";
 import YAMLEditor from "./components/YAMLEditor";
-import { fetchCollection, saveCollection, fetchMarkdown, fetchCollectionYaml, fetchOrphans, createFile, deleteFile, renameFile } from "./api";
-import { CollectionStructure, FileInfo, FileNode } from "./types";
+import {
+  listProjects, createProject, deleteProject, renameProject,
+  fetchProjectMd, saveProjectMd,
+  fetchCollection, saveCollection, fetchMarkdown, saveMarkdown, fetchCollectionYaml,
+  fetchOrphans, createFile, deleteFile, renameFile,
+} from "./api";
+import { CollectionStructure, FileInfo, FileNode, ProjectInfo } from "./types";
+import { insertAsChild, reorder, removeNode } from "./treeHelpers";
 
-type OverlayType = "editor" | "yaml" | null;
+const LAST_PROJECT_KEY = "mdtree_project";
+
+type OverlayType = "editor" | "yaml" | "project-md" | null;
 
 export default function App() {
+  const [projects, setProjects] = useState<ProjectInfo[]>([]);
+  const [currentProject, setCurrentProject] = useState<string | null>(null);
   const [collection, setCollection] = useState<CollectionStructure>({ root: [] });
   const [orphans, setOrphans] = useState<FileInfo[]>([]);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [editorContent, setEditorContent] = useState("");
   const [savedContent, setSavedContent] = useState("");
   const [yamlContent, setYamlContent] = useState("");
+  const [projectMdContent, setProjectMdContent] = useState("");
   const [viMode, setViMode] = useState(true);
   const [overlayType, setOverlayType] = useState<OverlayType>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Stable ref so close guard can read current content without stale closure
   const editorContentRef = useRef(editorContent);
   const savedContentRef = useRef(savedContent);
   useEffect(() => { editorContentRef.current = editorContent; }, [editorContent]);
   useEffect(() => { savedContentRef.current = savedContent; }, [savedContent]);
 
-  const loadCollection = useCallback(async () => {
+  const loadCollection = useCallback(async (project: string) => {
     try {
-      const [c, o] = await Promise.all([fetchCollection(), fetchOrphans()]);
+      const [c, o] = await Promise.all([fetchCollection(project), fetchOrphans(project)]);
       setCollection(c);
       setOrphans(o);
     } catch {
       setError("Failed to load collection");
-    } finally {
-      setLoading(false);
     }
   }, []);
 
-  useEffect(() => { loadCollection(); }, [loadCollection]);
+  // Initial load: fetch projects, pick last used or first available
+  useEffect(() => {
+    (async () => {
+      try {
+        const ps = await listProjects();
+        setProjects(ps);
+        if (ps.length === 0) {
+          setLoading(false);
+          return;
+        }
+        const saved = localStorage.getItem(LAST_PROJECT_KEY);
+        const project = (saved && ps.some(p => p.name === saved)) ? saved : ps[0].name;
+        setCurrentProject(project);
+        await loadCollection(project);
+      } catch {
+        setError("Failed to load projects");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [loadCollection]);
+
+  const handleSwitchProject = useCallback(async (name: string) => {
+    setCurrentProject(name);
+    localStorage.setItem(LAST_PROJECT_KEY, name);
+    setSelectedPath(null);
+    setOverlayType(null);
+    setCollection({ root: [] });
+    setOrphans([]);
+    await loadCollection(name);
+  }, [loadCollection]);
+
+  const handleCreateProject = useCallback(async (name: string) => {
+    await createProject(name);
+    const ps = await listProjects();
+    setProjects(ps);
+    await handleSwitchProject(name);
+  }, [handleSwitchProject]);
+
+  const handleRenameProject = useCallback(async (oldName: string, newName: string) => {
+    const { new_name } = await renameProject(oldName, newName);
+    const ps = await listProjects();
+    setProjects(ps);
+    setCurrentProject(new_name);
+    localStorage.setItem(LAST_PROJECT_KEY, new_name);
+  }, []);
+
+  const handleDeleteProject = useCallback(async (name: string) => {
+    await deleteProject(name);
+    const ps = await listProjects();
+    setProjects(ps);
+    if (ps.length > 0) {
+      await handleSwitchProject(ps[0].name);
+    } else {
+      setCurrentProject(null);
+      setCollection({ root: [] });
+      setOrphans([]);
+      setOverlayType(null);
+    }
+  }, [handleSwitchProject]);
 
   const handleHighlight = useCallback((path: string) => {
     setSelectedPath(path);
   }, []);
 
   const handleSelect = useCallback(async (path: string) => {
-    const text = await fetchMarkdown(path).catch(() => "# Error loading file");
+    if (!currentProject) return;
+    const text = await fetchMarkdown(currentProject, path).catch(() => "# Error loading file");
     setSelectedPath(path);
     setEditorContent(text);
     setSavedContent(text);
     setOverlayType("editor");
-  }, []);
+  }, [currentProject]);
 
   const handleCloseOverlay = useCallback(() => {
     if (overlayType === "editor" && editorContentRef.current !== savedContentRef.current) {
@@ -59,14 +127,26 @@ export default function App() {
   }, [overlayType, selectedPath]);
 
   const handleOpenYaml = useCallback(async () => {
+    if (!currentProject) return;
     try {
-      const y = await fetchCollectionYaml();
+      const y = await fetchCollectionYaml(currentProject);
       setYamlContent(y);
     } catch {}
     setOverlayType("yaml");
-  }, []);
+  }, [currentProject]);
 
-  const handleYamlSaved = useCallback(() => { loadCollection(); }, [loadCollection]);
+  const handleOpenProjectMd = useCallback(async () => {
+    if (!currentProject) return;
+    try {
+      const text = await fetchProjectMd(currentProject);
+      setProjectMdContent(text);
+    } catch {}
+    setOverlayType("project-md");
+  }, [currentProject]);
+
+  const handleYamlSaved = useCallback(() => {
+    if (currentProject) loadCollection(currentProject);
+  }, [currentProject, loadCollection]);
 
   const handleFileSaved = useCallback((path: string, content: string) => {
     setSavedContent(content);
@@ -78,40 +158,63 @@ export default function App() {
   }, []);
 
   const handleCollectionChange = useCallback(async (c: CollectionStructure) => {
+    if (!currentProject) return;
     setCollection(c);
     try {
-      await saveCollection(c);
-      const o = await fetchOrphans();
+      await saveCollection(currentProject, c);
+      const o = await fetchOrphans(currentProject);
       setOrphans(o);
     } catch {}
-  }, []);
+  }, [currentProject]);
 
   const handleCreateFile = useCallback(async (filename: string) => {
-    await createFile(filename);
-    await loadCollection();
+    if (!currentProject) return;
+    await createFile(currentProject, filename);
+    await loadCollection(currentProject);
     const initContent = `# ${filename.replace(/\.md$/, "").replace(/[-_]/g, " ").replace(/\b\w/g, c => c.toUpperCase())}\n`;
     setSelectedPath(filename);
     setEditorContent(initContent);
     setSavedContent(initContent);
     setOverlayType("editor");
-  }, [loadCollection]);
+  }, [currentProject, loadCollection]);
 
   const handleDeleteFile = useCallback(async (path: string) => {
-    await deleteFile(path);
+    if (!currentProject) return;
+    await deleteFile(currentProject, path);
     if (selectedPath === path) {
       setOverlayType(null);
       setSelectedPath(null);
     }
-    await loadCollection();
-  }, [selectedPath, loadCollection]);
+    await loadCollection(currentProject);
+  }, [currentProject, selectedPath, loadCollection]);
+
+  const handleCreateChildFile = useCallback(async (parentPath: string, filename: string) => {
+    if (!currentProject) return;
+    await createFile(currentProject, filename);
+    setCollection(prev => {
+      const [withoutNew, newNode] = removeNode(
+        [...prev.root, { path: filename, title: filename.replace(/\.md$/, "").replace(/[-_]/g, " ").replace(/\b\w/g, c => c.toUpperCase()), order: 0, children: [] }],
+        filename
+      );
+      if (!newNode) return prev;
+      return { root: reorder(insertAsChild(withoutNew, parentPath, newNode)) };
+    });
+    await loadCollection(currentProject);
+    const initContent = `# ${filename.replace(/\.md$/, "").replace(/[-_]/g, " ").replace(/\b\w/g, c => c.toUpperCase())}\n`;
+    setSelectedPath(filename);
+    setEditorContent(initContent);
+    setSavedContent(initContent);
+    setOverlayType("editor");
+  }, [currentProject, loadCollection]);
 
   const handleRenameFile = useCallback(async (oldPath: string, newName: string) => {
+    if (!currentProject) return;
     let name = newName.trim().replace(/ /g, "-");
     if (!name.endsWith(".md")) name += ".md";
-    const { new_path } = await renameFile(oldPath, name);
+    const { new_path } = await renameFile(currentProject, oldPath, name);
     if (selectedPath === oldPath) setSelectedPath(new_path);
-    await loadCollection();
-  }, [selectedPath, loadCollection]);
+    await loadCollection(currentProject);
+  }, [currentProject, selectedPath, loadCollection]);
 
   const overlayOpen = overlayType !== null;
 
@@ -125,7 +228,6 @@ export default function App() {
 
   return (
     <div style={{ position: "relative", height: "100vh", width: "100vw", overflow: "hidden", background: "#ffffff", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
-      {/* Full-width hierarchy tree */}
       <div style={{ width: "100%", height: "100%" }}>
         <Sidebar
           collection={collection}
@@ -136,13 +238,21 @@ export default function App() {
           onCreateFile={handleCreateFile}
           onDeleteFile={handleDeleteFile}
           onRenameFile={handleRenameFile}
+          onCreateChildFile={handleCreateChildFile}
           onOpenYaml={handleOpenYaml}
           yamlOpen={overlayType === "yaml"}
           orphans={orphans}
+          currentProject={currentProject ?? ""}
+          currentProjectTitle={projects.find(p => p.name === currentProject)?.title ?? currentProject ?? ""}
+          projects={projects}
+          onSwitchProject={handleSwitchProject}
+          onCreateProject={handleCreateProject}
+          onDeleteProject={handleDeleteProject}
+          onRenameProject={handleRenameProject}
+          onOpenProjectMd={handleOpenProjectMd}
         />
       </div>
 
-      {/* Overlay panel */}
       <div className={`overlay-panel${overlayOpen ? " overlay-panel--open" : ""}`}>
         <span className="overlay-close-btn" onClick={handleCloseOverlay}>✕</span>
         {overlayType === "editor" && selectedPath && (
@@ -155,6 +265,10 @@ export default function App() {
             viMode={viMode}
             onViModeChange={setViMode}
             onSaved={handleFileSaved}
+            onSave={async (path, content) => {
+              if (!currentProject) return;
+              await saveMarkdown(currentProject, path, content);
+            }}
           />
         )}
         {overlayType === "yaml" && (
@@ -164,6 +278,20 @@ export default function App() {
             onSaved={handleYamlSaved}
             viMode={viMode}
             readOnly
+          />
+        )}
+        {overlayType === "project-md" && currentProject && (
+          <MarkdownEditor
+            key={`project-md-${currentProject}`}
+            path={`${currentProject}/project.md`}
+            content={projectMdContent}
+            savedContent={projectMdContent}
+            onContentChange={setProjectMdContent}
+            viMode={viMode}
+            onViModeChange={setViMode}
+            onSave={async (_path, content) => {
+              await saveProjectMd(currentProject, content);
+            }}
           />
         )}
       </div>

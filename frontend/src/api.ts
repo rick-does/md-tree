@@ -1,21 +1,73 @@
-import { CollectionStructure, FileInfo } from "./types";
+import { CollectionStructure, FileInfo, ProjectInfo } from "./types";
 
 const BASE = "/api";
 
-export async function fetchFiles(): Promise<FileInfo[]> {
-  const r = await fetch(`${BASE}/files`);
+// ── Projects ──────────────────────────────────────────────────────────────────
+
+export async function listProjects(): Promise<ProjectInfo[]> {
+  const r = await fetch(`${BASE}/projects`);
+  if (!r.ok) throw new Error("Failed to fetch projects");
+  return r.json();
+}
+
+export async function renameProject(name: string, newName: string): Promise<{ new_name: string }> {
+  const r = await fetch(`${BASE}/projects/${name}/rename`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ new_name: newName }),
+  });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error(err.detail ?? "Failed to rename project");
+  }
+  return r.json();
+}
+
+export async function createProject(name: string): Promise<void> {
+  const r = await fetch(`${BASE}/projects/${name}`, { method: "POST" });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error(err.detail ?? "Failed to create project");
+  }
+}
+
+export async function deleteProject(name: string): Promise<void> {
+  const r = await fetch(`${BASE}/projects/${name}`, { method: "DELETE" });
+  if (!r.ok) throw new Error("Failed to delete project");
+}
+
+export async function fetchProjectMd(project: string): Promise<string> {
+  const r = await fetch(`${BASE}/projects/${project}/project-md`);
+  if (!r.ok) throw new Error("Failed to fetch project.md");
+  const data = await r.json();
+  return data.content;
+}
+
+export async function saveProjectMd(project: string, content: string): Promise<void> {
+  const r = await fetch(`${BASE}/projects/${project}/project-md`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ path: "project.md", content }),
+  });
+  if (!r.ok) throw new Error("Failed to save project.md");
+}
+
+// ── Files ─────────────────────────────────────────────────────────────────────
+
+export async function fetchFiles(project: string): Promise<FileInfo[]> {
+  const r = await fetch(`${BASE}/projects/${project}/files`);
   if (!r.ok) throw new Error("Failed to fetch files");
   return r.json();
 }
 
-export async function fetchCollection(): Promise<CollectionStructure> {
-  const r = await fetch(`${BASE}/collection`);
+export async function fetchCollection(project: string): Promise<CollectionStructure> {
+  const r = await fetch(`${BASE}/projects/${project}/collection`);
   if (!r.ok) throw new Error("Failed to fetch collection");
   return r.json();
 }
 
-export async function saveCollection(collection: CollectionStructure): Promise<void> {
-  const r = await fetch(`${BASE}/collection`, {
+export async function saveCollection(project: string, collection: CollectionStructure): Promise<void> {
+  const r = await fetch(`${BASE}/projects/${project}/collection`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ collection }),
@@ -23,15 +75,15 @@ export async function saveCollection(collection: CollectionStructure): Promise<v
   if (!r.ok) throw new Error("Failed to save collection");
 }
 
-export async function fetchMarkdown(path: string): Promise<string> {
-  const r = await fetch(`${BASE}/markdown/${path}`);
+export async function fetchMarkdown(project: string, path: string): Promise<string> {
+  const r = await fetch(`${BASE}/projects/${project}/markdown/${path}`);
   if (!r.ok) throw new Error("File not found");
   const data = await r.json();
   return data.content;
 }
 
-export async function saveMarkdown(path: string, content: string): Promise<void> {
-  const r = await fetch(`${BASE}/markdown/${path}`, {
+export async function saveMarkdown(project: string, path: string, content: string): Promise<void> {
+  const r = await fetch(`${BASE}/projects/${project}/markdown/${path}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ path, content }),
@@ -39,8 +91,8 @@ export async function saveMarkdown(path: string, content: string): Promise<void>
   if (!r.ok) throw new Error("Failed to save file");
 }
 
-export async function createFile(path: string): Promise<{ title: string }> {
-  const r = await fetch(`${BASE}/markdown/${path}`, { method: "POST" });
+export async function createFile(project: string, path: string): Promise<{ title: string }> {
+  const r = await fetch(`${BASE}/projects/${project}/markdown/${path}`, { method: "POST" });
   if (!r.ok) {
     const err = await r.json().catch(() => ({}));
     throw new Error(err.detail ?? "Failed to create file");
@@ -48,13 +100,13 @@ export async function createFile(path: string): Promise<{ title: string }> {
   return r.json();
 }
 
-export async function deleteFile(path: string): Promise<void> {
-  const r = await fetch(`${BASE}/markdown/${path}`, { method: "DELETE" });
+export async function deleteFile(project: string, path: string): Promise<void> {
+  const r = await fetch(`${BASE}/projects/${project}/markdown/${path}`, { method: "DELETE" });
   if (!r.ok) throw new Error("Failed to delete file");
 }
 
-export async function renameFile(oldPath: string, newPath: string): Promise<{ new_path: string }> {
-  const r = await fetch(`${BASE}/rename/${oldPath}`, {
+export async function renameFile(project: string, oldPath: string, newPath: string): Promise<{ new_path: string }> {
+  const r = await fetch(`${BASE}/projects/${project}/rename/${oldPath}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ new_path: newPath }),
@@ -66,15 +118,15 @@ export async function renameFile(oldPath: string, newPath: string): Promise<{ ne
   return r.json();
 }
 
-export async function fetchCollectionYaml(): Promise<string> {
-  const r = await fetch(`${BASE}/collection/yaml`);
+export async function fetchCollectionYaml(project: string): Promise<string> {
+  const r = await fetch(`${BASE}/projects/${project}/collection/yaml`);
   if (!r.ok) throw new Error("Failed to fetch YAML");
   const data = await r.json();
   return data.content;
 }
 
-export async function saveCollectionYaml(content: string): Promise<void> {
-  const r = await fetch(`${BASE}/collection/yaml`, {
+export async function saveCollectionYaml(project: string, content: string): Promise<void> {
+  const r = await fetch(`${BASE}/projects/${project}/collection/yaml`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ content }),
@@ -85,8 +137,8 @@ export async function saveCollectionYaml(content: string): Promise<void> {
   }
 }
 
-export async function fetchOrphans(): Promise<FileInfo[]> {
-  const r = await fetch(`${BASE}/orphans`);
+export async function fetchOrphans(project: string): Promise<FileInfo[]> {
+  const r = await fetch(`${BASE}/projects/${project}/orphans`);
   if (!r.ok) throw new Error("Failed to fetch orphans");
   return r.json();
 }

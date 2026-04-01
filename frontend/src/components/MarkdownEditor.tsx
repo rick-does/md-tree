@@ -3,7 +3,6 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import CodeEditor from "./CodeEditor";
-import { saveMarkdown } from "../api";
 
 interface Props {
   path: string;
@@ -13,9 +12,10 @@ interface Props {
   viMode: boolean;
   onViModeChange: (v: boolean) => void;
   onSaved?: (path: string, content: string) => void;
+  onSave: (path: string, content: string) => Promise<void>;
 }
 
-export default function MarkdownEditor({ path, content, savedContent, onContentChange, viMode, onViModeChange, onSaved }: Props) {
+export default function MarkdownEditor({ path, content, savedContent, onContentChange, viMode, onViModeChange, onSaved, onSave }: Props) {
   const [view, setView] = useState<"edit" | "preview" | "split">("split");
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
@@ -31,7 +31,7 @@ export default function MarkdownEditor({ path, content, savedContent, onContentC
   const handleSave = useCallback(async () => {
     setSaving(true);
     try {
-      await saveMarkdown(path, content);
+      await onSave(path, content);
       savedContentRef.current = content;
       onSaved?.(path, content);
       setSaveMsg("Saved ✓");
@@ -41,7 +41,7 @@ export default function MarkdownEditor({ path, content, savedContent, onContentC
     } finally {
       setSaving(false);
     }
-  }, [path, content, onSaved]);
+  }, [path, content, onSaved, onSave]);
 
   // Ctrl+S / Cmd+S
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
