@@ -481,10 +481,10 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
                     </div>
                     {/* Orphan pane */}
                     <div ref={orphanSectionRef} style={{ width: "360px", overflowY: "auto", minHeight: 0, padding: `${GAP}px 8px 8px 8px`, position: "relative", userSelect: "none" }}>
-                      <div style={{ padding: "4px 0 6px", borderBottom: "1px solid #d0e8f7", display: "flex", alignItems: "center", gap: "9px", position: "sticky", top: 0, background: "#fff", zIndex: 1 }}>
+                      <div style={{ padding: "4px 0 6px", borderBottom: "1px solid #d0e8f7", display: "flex", alignItems: "center", gap: "18px", position: "sticky", top: 0, background: "#fff", zIndex: 1 }}>
                         <div style={{ display: "flex", border: "1px solid #b3d9f7", borderRadius: "4px", overflow: "hidden" }}>
-                          {(([["recent", "Recent"], ["alpha", "A→Z"], ["custom", "Custom"]] as const)).map(([mode, label]) => (
-                            <button key={mode} onClick={() => setOrphanSort(mode)} style={{ padding: "2px 8px", border: "none", cursor: "pointer", fontSize: "11px", background: orphanSort === mode ? "#1a6fa8" : "#e8f4fd", color: orphanSort === mode ? "#fff" : "#1a6fa8" }}>{label}</button>
+                          {(([["recent", "Recent"], ["alpha", "A→Z"], ["custom", "Custom"]] as const)).map(([mode, label], i) => (
+                            <button key={mode} onClick={() => setOrphanSort(mode)} style={{ padding: "2px 8px", border: "none", borderRight: i < 2 ? "1px solid #b3d9f7" : "none", cursor: "pointer", fontSize: "11px", background: orphanSort === mode ? "#1a6fa8" : "#e8f4fd", color: orphanSort === mode ? "#fff" : "#1a6fa8" }}>{label}</button>
                           ))}
                         </div>
                         <button
@@ -549,8 +549,11 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
               <div style={{
                 display: "inline-flex", alignItems: "center",
                 width: "2.5in", borderRadius: "6px",
-                border: "1.5px solid #1a6fa8", background: "#fff",
-                boxShadow: "0 6px 20px rgba(0,0,0,0.22)",
+                border: "1.5px solid #1a6fa8",
+                background: !orphans.some(o => o.path === activeId) ? "#e8f4fd" : "#fff",
+                boxShadow: !orphans.some(o => o.path === activeId)
+                  ? "inset 5px 0 0 0 #1a6fa8, 0 6px 20px rgba(0,0,0,0.22)"
+                  : "0 6px 20px rgba(0,0,0,0.22)",
                 opacity: 0.97, userSelect: "none",
                 padding: "10px 10px 10px 12px",
               }}>
@@ -561,9 +564,6 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
         </DragOverlay>
       </DndContext>
 
-      <div style={{ padding: "6px 0", borderTop: "1px solid #d0e8f7", fontSize: "11px", color: "#bbb", lineHeight: 1.7 }}>
-        ⠿ drag to reorder · drag <b style={{ color: "#aaa" }}>right</b> to nest · <b style={{ color: "#aaa" }}>left</b> to un-nest
-      </div>
     </div>
   );
 }

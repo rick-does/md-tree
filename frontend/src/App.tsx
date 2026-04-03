@@ -311,6 +311,7 @@ export default function App() {
               if (!currentProject) return;
               await saveMarkdown(currentProject, path, content);
             }}
+            onRename={handleRenameFile}
           />
         )}
         {overlayType === "yaml" && (

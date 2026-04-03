@@ -100,6 +100,7 @@ export function SortableItem({ node, depth, isLast, ancestors, selectedPath, tit
   const [renaming, setRenaming] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
   const [previewContent, setPreviewContent] = useState<string | null>(null);
   const [addingChild, setAddingChild] = useState(false);
   const [childName, setChildName] = useState("");
@@ -116,6 +117,10 @@ export function SortableItem({ node, depth, isLast, ancestors, selectedPath, tit
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [menuOpen]);
+
+  useEffect(() => {
+    if (isDragging) onSelect(node.path);
+  }, [isDragging]);
 
   const isExpanded = expanded.has(node.path);
   const hasChildren = (node.children ?? []).length > 0;
@@ -140,17 +145,14 @@ export function SortableItem({ node, depth, isLast, ancestors, selectedPath, tit
     } catch (e: any) { setChildError(e.message ?? "Error"); }
   };
 
-  const mi: CSSProperties = { padding: "7px 14px", fontSize: "13px", cursor: "pointer", color: "#1a1a1a", whiteSpace: "nowrap" };
+  const mi: CSSProperties = { padding: "7px 14px", fontSize: "13px", fontWeight: "normal", cursor: "pointer", color: "#1a1a1a", whiteSpace: "nowrap" };
   // Width of ConnectorLines area for this depth level
   const connectorWidth = (ancestors.length + 1) * COL_W;
 
   return (
     <div ref={setNodeRef} style={{ transform: (isDragging || depth > 1 || activeId !== null) ? undefined : CSS.Transform.toString(transform), transition: (isDragging || depth > 1 || activeId !== null) ? undefined : transition, margin: `${GAP}px 0` }}>
       {showTopIndicator && (
-        <div style={{ display: "flex" }}>
-          <div style={{ width: `${COL_W * 2}px`, flexShrink: 0 }} />
-          <div style={{ height: "2px", background: "#6b8cff", borderRadius: "1px", width: "2.5in", margin: "0 4px" }} />
-        </div>
+        <div style={{ height: "40px" }} />
       )}
       <div style={{ display: "flex", alignItems: "stretch", opacity: isDragging ? 0 : 1 }}>
         <ConnectorLines depth={depth} ancestors={ancestors} isLast={isLast} />
@@ -173,8 +175,8 @@ export function SortableItem({ node, depth, isLast, ancestors, selectedPath, tit
           >
             <div style={{ display: "flex", alignItems: "center", flex: 1, minWidth: 0, gap: "2px", padding: "10px 36px 10px 12px", position: "relative" }}>
               {hasChildren ? (
-                <span onClick={(e) => { e.stopPropagation(); toggleExpand(node.path); }} style={{ width: "16px", marginRight: "3px", flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transform: isExpanded ? "rotate(90deg)" : "none", transition: "transform 0.15s" }}>
-                  <svg width="11" height="16" viewBox="0 0 11 16" fill="none" stroke="#888" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="2,2 9,8 2,14"/></svg>
+                <span onClick={(e) => { e.stopPropagation(); toggleExpand(node.path); }} style={{ width: "16px", flexShrink: 0, marginTop: "-10px", marginBottom: "-10px", marginRight: "3px", paddingTop: "10px", paddingBottom: "10px", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                  <svg width="11" height="16" viewBox="0 0 11 16" fill="none" stroke="#888" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isExpanded ? "rotate(90deg)" : "none", transition: "transform 0.15s", flexShrink: 0 }}><polyline points="2,2 9,8 2,14"/></svg>
                 </span>
               ) : (
                 <span style={{ width: "16px", marginRight: "3px", flexShrink: 0 }} />
@@ -204,12 +206,12 @@ export function SortableItem({ node, depth, isLast, ancestors, selectedPath, tit
               {/* ⋮ trigger — menu rendered inside so top: 50%, left: 50% = top-left at button center */}
               <span
                 ref={menuTriggerRef}
-                onClick={(e) => { e.stopPropagation(); onSelect(node.path); setMenuOpen(o => !o); }}
+                onClick={(e) => { e.stopPropagation(); onSelect(node.path); if (!menuOpen && menuTriggerRef.current) { const r = menuTriggerRef.current.getBoundingClientRect(); setMenuPos({ top: r.top + r.height / 2, left: r.left + r.width / 2 }); } setMenuOpen(o => !o); }}
                 style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: "36px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "16px", fontWeight: "bold", color: "#bbb" }}
               >
                 ⋮
                 {menuOpen && (
-                  <div onClick={(e) => e.stopPropagation()} style={{ position: "absolute", top: "50%", left: "50%", zIndex: 200, background: "#fff", border: "1px solid #d0e8f7", borderRadius: "6px", boxShadow: "0 4px 16px rgba(0,0,0,0.12)", minWidth: "150px", overflow: "hidden" }}>
+                  <div onClick={(e) => e.stopPropagation()} style={{ position: "fixed", top: menuPos?.top ?? 0, left: menuPos?.left ?? 0, zIndex: 200, background: "#fff", border: "1px solid #d0e8f7", borderRadius: "6px", boxShadow: "0 4px 16px rgba(0,0,0,0.12)", minWidth: "150px", overflow: "hidden" }}>
                     <div style={mi} onClick={() => { onOpen(node.path); setMenuOpen(false); }} onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#f5f5f5"; }} onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = ""; }}>Edit</div>
                     <div style={mi} onClick={() => { setAddingChild(true); setChildName(""); setChildError(""); setMenuOpen(false); setTimeout(() => childInputRef.current?.focus(), 50); }} onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#f5f5f5"; }} onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = ""; }}>Add sub-page</div>
                     <div style={{ ...mi, color: "#c00" }} onClick={() => { onDelete(node.path); setMenuOpen(false); }} onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#fff5f5"; }} onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = ""; }}>Delete</div>
