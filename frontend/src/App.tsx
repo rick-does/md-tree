@@ -8,7 +8,7 @@ import {
   listProjects, createProject, deleteProject, archiveProject, renameProject,
   fetchProjectMd, saveProjectMd,
   fetchCollection, saveCollection, fetchMarkdown, saveMarkdown, fetchCollectionYaml,
-  fetchOrphans, createFile, deleteFile, renameFile,
+  fetchOrphans, createFile, deleteFile, archiveFile, renameFile,
 } from "./api";
 import { CollectionStructure, FileInfo, FileNode, ProjectInfo } from "./types";
 import { insertAsChild, reorder, removeNode } from "./treeHelpers";
@@ -202,12 +202,13 @@ export default function App() {
 
   const handleDeleteFile = useCallback(async (path: string) => {
     if (!currentProject) return;
-    await deleteFile(currentProject, path);
+    await archiveFile(currentProject, path);
     if (selectedPath === path) {
       setOverlayType(null);
       setSelectedPath(null);
     }
     await loadCollection(currentProject);
+    window.alert(`"${path}" is now archived`);
   }, [currentProject, selectedPath, loadCollection]);
 
   const handleCreateChildFile = useCallback(async (parentPath: string, filename: string) => {
@@ -254,8 +255,12 @@ export default function App() {
   }
 
   return (
-    <div style={{ position: "relative", height: "100vh", width: "100vw", overflow: "hidden", background: "#ffffff", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
-      <div style={{ width: "100%", height: "100%" }}>
+    <div style={{ position: "relative", height: "100vh", width: "100vw", overflow: "hidden", background: "#ffffff", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", display: "flex", flexDirection: "column",  }}>
+      <div style={{ height: "50px", flexShrink: 0, background: "#1a6fa8", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 1in" }}>
+        <span style={{ color: "#fff", fontWeight: "bold", fontSize: "20px" }}>.md<span style={{ color: "#f90" }}>T</span>ree</span>
+        <span style={{ color: "#fff", fontSize: "13px", fontStyle: "italic" }}>eau de markdown</span>
+      </div>
+      <div style={{ flex: 1, minHeight: 0 }}>
         <Sidebar
           collection={collection}
           selectedPath={selectedPath}

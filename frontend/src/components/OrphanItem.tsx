@@ -49,7 +49,7 @@ export function OrphanItem({ path, title, titleMode, isMultiSelected, onMultiSel
           ref={(el) => setChipRef(el as HTMLElement | null)}
           data-orphan-chip="true"
           style={{
-            display: "inline-flex", alignItems: "stretch",
+            position: "relative", display: "inline-flex", alignItems: "stretch",
             width: "2.5in", overflow: "visible",
             background: isMultiSelected ? "#fff3e0" : hovered ? "#fff8f0" : "transparent",
             boxShadow: isMultiSelected ? "inset 5px 0 0 0 #ff8c00" : "none",
@@ -66,18 +66,18 @@ export function OrphanItem({ path, title, titleMode, isMultiSelected, onMultiSel
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => { setHovered(false); setPreviewContent(null); setPreviewFixed(null); }}
         >
-          <div style={{ display: "flex", alignItems: "center", flex: 1, minWidth: 0, gap: "2px", padding: "5px 10px 5px 12px" }}>
+          <div style={{ display: "flex", alignItems: "center", flex: 1, minWidth: 0, padding: "5px 10px 5px 12px" }}>
             <span style={{ fontSize: "15px", fontWeight: 500, color: "#555", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }} title={label}>
               {label}
             </span>
-            {(isMultiSelected || hovered) && (
-              <span
-                ref={menuTriggerRef}
-                onClick={(e) => { e.stopPropagation(); onAddToSelection(path); setMenuOpen(o => !o); }}
-                style={{ flexShrink: 0, cursor: "pointer", fontSize: "16px", fontWeight: "bold", color: "#bbb", padding: "0 2px", lineHeight: 1 }}
-              >⋮</span>
-            )}
           </div>
+          {(isMultiSelected || hovered) && (
+            <span
+              ref={menuTriggerRef}
+              onClick={(e) => { e.stopPropagation(); onAddToSelection(path); setMenuOpen(o => !o); }}
+              style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: "36px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "16px", fontWeight: "bold", color: "#bbb" }}
+            >⋮</span>
+          )}
         </div>
         {previewContent && !isDragging && previewFixed && (
           <div style={{

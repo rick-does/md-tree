@@ -160,6 +160,33 @@ def save_markdown(project_name: str, file_path: str, body: FileContent):
     return {"status": "ok"}
 
 
+@app.post("/api/projects/{project_name}/archive-markdown/{file_path:path}")
+def archive_markdown(project_name: str, file_path: str):
+    import time
+    path = safe_path(project_name, file_path)
+    if path.exists():
+        archive_dir = path.parent / "_archive"
+        archive_dir.mkdir(exist_ok=True)
+        dest = archive_dir / path.name
+        if dest.exists():
+            dest = archive_dir / f"{path.stem}-{int(time.time())}{path.suffix}"
+        path.rename(dest)
+    collection = load_collection(project_name)
+
+    def remove_recursive(nodes):
+        result = []
+        for n in nodes:
+            if n.path == file_path:
+                continue
+            n.children = remove_recursive(n.children or [])
+            result.append(n)
+        return result
+
+    collection.root = remove_recursive(collection.root)
+    save_collection(project_name, collection)
+    return {"status": "ok"}
+
+
 @app.delete("/api/projects/{project_name}/markdown/{file_path:path}")
 def delete_markdown(project_name: str, file_path: str):
     path = safe_path(project_name, file_path)

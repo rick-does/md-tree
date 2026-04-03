@@ -109,6 +109,8 @@ def get_all_md_files(project: str) -> list[dict]:
     files = []
     for path in sorted(markdowns_dir.rglob("*.md"), key=lambda p: p.stat().st_mtime, reverse=True):
         rel_path = str(path.relative_to(markdowns_dir))
+        if rel_path.startswith("_archive/") or "/_archive/" in rel_path:
+            continue
         try:
             post = frontmatter.load(str(path))
             content = post.content

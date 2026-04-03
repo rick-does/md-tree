@@ -230,7 +230,6 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
   });
 
   const handleDelete = async (path: string) => {
-    if (!confirm(`Delete "${path}"? This cannot be undone.`)) return;
     await onDeleteFile(path);
   };
 

@@ -186,7 +186,7 @@ export function SortableItem({ node, depth, isLast, ancestors, selectedPath, tit
                 />
               ) : (
                 <span
-                  style={{ fontSize: "15px", fontWeight: 500, color: "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}
+                  style={{ fontSize: "15px", fontWeight: 500, color: "#555", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}
                   onDoubleClick={(e) => { e.stopPropagation(); setRenaming(true); }}
                   title={label}
                 >
@@ -269,7 +269,7 @@ export function SortableItem({ node, depth, isLast, ancestors, selectedPath, tit
             background: "#e8f4fd",
           }}>
             <span style={{ width: "16px", marginRight: "3px", flexShrink: 0 }} />
-            <span style={{ fontSize: "15px", fontWeight: 500, color: "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+            <span style={{ fontSize: "15px", fontWeight: 500, color: "#555", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
               {activeLabel}
             </span>
           </div>

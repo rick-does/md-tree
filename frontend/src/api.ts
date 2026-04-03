@@ -114,6 +114,11 @@ export async function deleteFile(project: string, path: string): Promise<void> {
   if (!r.ok) throw new Error("Failed to delete file");
 }
 
+export async function archiveFile(project: string, path: string): Promise<void> {
+  const r = await fetch(`${BASE}/projects/${project}/archive-markdown/${path}`, { method: "POST" });
+  if (!r.ok) throw new Error("Failed to archive file");
+}
+
 export async function renameFile(project: string, oldPath: string, newPath: string): Promise<{ new_path: string }> {
   const r = await fetch(`${BASE}/projects/${project}/rename/${oldPath}`, {
     method: "POST",

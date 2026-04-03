@@ -52,7 +52,10 @@ projects/{name}/
 `markdowns_dir` / `project.yaml` are gone — projects always use their local `markdowns/` folder.
 
 ### Orphans (labeled "Unlinked" in UI)
-Files in `markdowns/` not referenced in `collection.yaml`. Shown at the bottom of the sidebar; can be dragged into the hierarchy, double-clicked, or moved with the left-arrow key. All code variables use `orphan*` naming — only the UI label says "Unlinked". The Unlinked button is always visible; triangle is gray when no orphans, orange when there are.
+Files in `markdowns/` not referenced in `collection.yaml`. Shown in the orphan pane; can be dragged into the hierarchy, double-clicked, or moved with the left-arrow key. All code variables use `orphan*` naming — only the UI label says "Unlinked". The Unlinked chip is always visible; triangle is gray when no orphans, orange when there are.
+
+### File archive
+"Delete" from any file chip three-dot menu archives rather than truly deletes. Backend endpoint `POST /api/projects/{name}/archive-markdown/{file_path:path}` moves the file to `markdowns/_archive/` (timestamp suffix on name collision) and removes it from `collection.yaml`. `get_all_md_files` in `utils.py` skips any path under `_archive/`. No confirm dialog — archives immediately, shows `"${path}" is now archived` alert after.
 
 ---
 
@@ -96,6 +99,10 @@ Files in `markdowns/` not referenced in `collection.yaml`. Shown at the bottom o
 - **Mutual deselection**: selecting a hierarchy chip clears orphan selection (`handleHierarchySelect` wraps `onSelect`); selecting an orphan chip clears hierarchy selection via `onSelect(null)` in `handleOrphanSelect`.
 - **YAML viewer**: read-only — opened from project chip menu "View YAML". Not editable.
 - **Archive project**: trash icon on each project in the fly-out submenu. Moves `projects/{name}/` to `projects/_archive/{name}/` (timestamp suffix if name collision). `list_projects()` skips dirs starting with `_`. Real deletion is by hand in the filesystem.
+- **Top bar**: 50px fixed height, `#1a6fa8` background, `padding: 0 1in` (matches sidebar margins). `.mdTree` bold white with orange "T" on left; "eau de markdown" italic white 13px on right. App root is now `display: flex, flexDirection: column`; sidebar takes remaining height via `flex: 1, minHeight: 0`.
+- **Unlinked chip**: OrphanPane header is now a chip matching ProjectChip structure — blue (`#1a6fa8`), `borderRadius: 6px`, same padding/font/⋮ button. Clicking the label toggles expand/collapse (no chevron). Three-dot menu: Sort by (submenu: Recent / A→Z / Custom) → divider → ＋ New file. Sort controls and Add File button removed from the orphan list area. Chip positioned parallel to ProjectChip with identical top spacing (`paddingTop: 8px` on pane + `marginTop: ${GAP}px` on chip wrapper).
+- **Hierarchy chip text color**: `#555` (was `#1a1a1a`) — matches orphan chip text weight/color.
+- **OrphanItem ⋮ button**: now `position: absolute, right: 0, top: 0, bottom: 0, width: 36px` — matches SortableItem hit area exactly.
 
 ---
 
@@ -111,7 +118,7 @@ Files in `markdowns/` not referenced in `collection.yaml`. Shown at the bottom o
 1. ~~**Import/Export**~~ — done: import reads config from project root; export writes file to project root; MkDocs parser handles proper nesting
 2. ~~**Keyboard-only reorder**~~ — done: left/right nest/unnest, up/down cross-level movement; left-arrow moves orphans to hierarchy
 3. ~~**Search/filter**~~ — dropped; low value for a hierarchy-focused tool
-4. **Documentation project** — self-hosted docs as an mdTree project; users can read it in the app
+4. **Documentation project** — self-hosted docs as an mdTree project; users can read it in the app — **next up**
 
 ---
 

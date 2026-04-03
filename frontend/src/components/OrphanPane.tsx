@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, RefObject, MutableRefObject } from "react";
+import { useState, useEffect, useRef, RefObject, MutableRefObject, CSSProperties } from "react";
 import { FileInfo } from "../types";
 import { GAP } from "./SidebarConstants";
 import { OrphanItem } from "./OrphanItem";
@@ -41,10 +41,30 @@ export default function OrphanPane({
     if (hasOrphans && !prevHadOrphans.current) setOrphansExpanded(true);
     prevHadOrphans.current = hasOrphans;
   }, [hasOrphans]);
+
   const [creatingFile, setCreatingFile] = useState(false);
   const [newFileName, setNewFileName] = useState("");
   const [createError, setCreateError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const [sortSubmenuOpen, setSortSubmenuOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLSpanElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node) &&
+          menuButtonRef.current && !menuButtonRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+        setSortSubmenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [menuOpen]);
 
   const submitFile = async () => {
     let name = newFileName.trim();
@@ -68,23 +88,83 @@ export default function OrphanPane({
     ? orphanOrder.flatMap(p => { const o = orphans.find(x => x.path === p); return o ? [o] : []; })
     : orphans;
 
+  const mi: CSSProperties = { padding: "7px 14px", fontSize: "13px", cursor: "pointer", color: "#1a1a1a", whiteSpace: "nowrap", display: "flex", alignItems: "center", justifyContent: "space-between" };
+
   return (
-    <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", minHeight: 0 }}>
-      {/* Tab button */}
-      <div style={{ flexShrink: 0, paddingLeft: "100px" }}>
-        <button
-          onClick={() => setOrphansExpanded(e => !e)}
-          style={{
-            background: "#1a6fa8", border: "none", borderRadius: "4px 4px 0 0",
-            padding: "5px 12px", cursor: "pointer",
-            display: "flex", alignItems: "center", gap: "6px",
-            fontSize: "13px", fontWeight: 500, color: "#fff", letterSpacing: "0.3px",
-          }}
-        >
-          <span style={{ color: hasOrphans ? "#f90" : "#aaa", position: "relative", top: "-1.5px" }}>⚠</span>
-          <span>Unlinked</span>
-        </button>
+    <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", minHeight: 0, paddingTop: "8px" }}>
+      {/* Chip header */}
+      <div style={{ flexShrink: 0, paddingLeft: "100px", marginTop: `${GAP}px` }}>
+        <div style={{
+          display: "inline-flex", alignItems: "center",
+          width: "2.5in",
+          background: "#1a6fa8", borderRadius: "6px",
+          padding: "5px 8px 5px 12px",
+          userSelect: "none",
+        }}>
+          <span
+            style={{ fontSize: "15px", fontWeight: 600, color: "#fff", flex: 1, cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+            onClick={() => setOrphansExpanded(e => !e)}
+          >
+            <span style={{ color: hasOrphans ? "#f90" : "rgba(255,255,255,0.45)", marginRight: "6px", fontSize: "13px", position: "relative", top: "-1px" }}>⚠</span>
+            Unlinked
+          </span>
+          <span ref={menuButtonRef} style={{ position: "relative", flexShrink: 0 }}>
+            <span
+              onClick={() => {
+                if (!menuOpen && menuButtonRef.current) {
+                  const r = menuButtonRef.current.getBoundingClientRect();
+                  setMenuPos({ top: r.top + r.height / 2, left: r.left + r.width / 2 });
+                }
+                setMenuOpen(o => !o);
+              }}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "24px", height: "24px", borderRadius: "4px", cursor: "pointer", fontSize: "18px", fontWeight: "bold", color: menuOpen ? "#fff" : "rgba(255,255,255,0.65)", background: menuOpen ? "rgba(255,255,255,0.2)" : "transparent" }}
+              onMouseEnter={(e) => { if (!menuOpen) e.currentTarget.style.color = "#fff"; }}
+              onMouseLeave={(e) => { if (!menuOpen) e.currentTarget.style.color = "rgba(255,255,255,0.65)"; }}
+            >⋮</span>
+          </span>
+        </div>
       </div>
+
+      {menuOpen && menuPos && (
+        <div ref={menuRef} style={{
+          position: "fixed", top: menuPos.top, left: menuPos.left, zIndex: 1000,
+          background: "#fff", border: "1px solid #d0e8f7", borderRadius: "8px",
+          boxShadow: "0 4px 16px rgba(0,0,0,0.12)", minWidth: "170px", overflow: "visible",
+        }}>
+          <div
+            style={{ ...mi, position: "relative" }}
+            onMouseEnter={() => setSortSubmenuOpen(true)}
+            onMouseLeave={() => setSortSubmenuOpen(false)}
+          >
+            <span>Sort by</span>
+            <span style={{ fontSize: "18px", color: "#999", lineHeight: 0 }}>▸</span>
+            {sortSubmenuOpen && (
+              <div style={{
+                position: "absolute", left: "100%", top: 0, zIndex: 1001,
+                background: "#fff", border: "1px solid #d0e8f7", borderRadius: "8px",
+                boxShadow: "0 4px 16px rgba(0,0,0,0.12)", minWidth: "120px", overflow: "hidden",
+              }}>
+                {([["recent", "Recent"], ["alpha", "A→Z"], ["custom", "Custom"]] as const).map(([mode, label]) => (
+                  <div key={mode}
+                    style={{ ...mi, justifyContent: "flex-start", background: orphanSort === mode ? "#e8f4fd" : "transparent", color: orphanSort === mode ? "#1a6fa8" : "#1a1a1a", fontWeight: orphanSort === mode ? 600 : 400 }}
+                    onClick={() => { setOrphanSort(mode); setMenuOpen(false); setSortSubmenuOpen(false); }}
+                    onMouseEnter={(e) => { if (orphanSort !== mode) (e.currentTarget as HTMLDivElement).style.background = "#f5f5f5"; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = orphanSort === mode ? "#e8f4fd" : "transparent"; }}
+                  >{label}</div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div style={{ borderTop: "1px solid #e8e8e8", margin: "2px 0" }} />
+          <div
+            style={{ ...mi, justifyContent: "flex-start", color: "#1a6fa8" }}
+            onClick={() => { setMenuOpen(false); setCreatingFile(true); setNewFileName(""); setCreateError(""); setOrphansExpanded(true); setTimeout(() => inputRef.current?.focus(), 50); }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#f5f5f5"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = ""; }}
+          >＋ New file</div>
+        </div>
+      )}
+
       {/* Content row: arrow column + orphan list */}
       {orphansExpanded && (
         <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
@@ -112,18 +192,7 @@ export default function OrphanPane({
             </div>
           </div>
           {/* Orphan list */}
-          <div ref={orphanSectionRef} style={{ width: "360px", overflowY: "auto", minHeight: 0, padding: `${GAP}px 8px 8px 8px`, position: "relative", userSelect: "none" }}>
-            <div style={{ padding: "4px 0 6px", borderBottom: "1px solid #d0e8f7", display: "flex", alignItems: "center", gap: "18px", position: "sticky", top: 0, background: "#fff", zIndex: 1 }}>
-              <div style={{ display: "flex", border: "1px solid #b3d9f7", borderRadius: "4px", overflow: "hidden" }}>
-                {(([["recent", "Recent"], ["alpha", "A→Z"], ["custom", "Custom"]] as const)).map(([mode, label], i) => (
-                  <button key={mode} onClick={() => setOrphanSort(mode)} style={{ padding: "2px 8px", border: "none", borderRight: i < 2 ? "1px solid #b3d9f7" : "none", cursor: "pointer", fontSize: "11px", background: orphanSort === mode ? "#1a6fa8" : "#e8f4fd", color: orphanSort === mode ? "#fff" : "#1a6fa8", display: "flex", alignItems: "center" }}>{mode === "alpha" ? <>A<span style={{ position: "relative", top: "-1px" }}>→</span>Z</> : label}</button>
-                ))}
-              </div>
-              <button
-                onClick={(e) => { e.stopPropagation(); setCreatingFile(true); setNewFileName(""); setCreateError(""); setTimeout(() => inputRef.current?.focus(), 50); }}
-                style={{ padding: "2px 6px", fontSize: "11px", background: "#e8f4fd", color: "#1a6fa8", border: "1px solid #b3d9f7", borderRadius: "4px", cursor: "pointer", whiteSpace: "nowrap" }}
-              >Add File</button>
-            </div>
+          <div ref={orphanSectionRef} style={{ width: "360px", overflowY: "auto", minHeight: 0, padding: `6px 8px 8px 8px`, position: "relative", userSelect: "none" }}>
             {creatingFile && (
               <div style={{ marginBottom: "6px", display: "flex", flexDirection: "column", gap: "3px" }}>
                 <div style={{ display: "flex", gap: "4px" }}>
