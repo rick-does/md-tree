@@ -44,10 +44,13 @@ cd "%ROOT%frontend"
 if not exist "node_modules" (
     echo     Installing npm packages...
     npm install
-    if errorlevel 1 ( echo ERROR: npm install failed & exit /b 1 )
 )
+echo     Compiling...
 node node_modules/vite/bin/vite.js build
-if errorlevel 1 ( echo ERROR: Frontend build failed & exit /b 1 )
+if errorlevel 1 (
+    echo ERROR: Frontend build failed.
+    exit /b 1
+)
 
 REM Start backend
 echo.
@@ -56,7 +59,7 @@ echo     Press Ctrl+C to stop.
 echo.
 cd "%ROOT%backend"
 if not exist ".venv" (
-    echo     Creating virtualenv...
+    echo     Creating Python environment...
     python -m venv .venv
     if errorlevel 1 (
         echo ERROR: Could not create Python virtual environment.
@@ -64,8 +67,12 @@ if not exist ".venv" (
         echo   https://www.python.org/downloads
         exit /b 1
     )
+    echo     Installing Python packages...
     .venv\Scripts\pip install -q -r requirements.txt
-    if errorlevel 1 ( echo ERROR: Failed to install Python dependencies & exit /b 1 )
+    if errorlevel 1 (
+        echo ERROR: Failed to install Python dependencies.
+        exit /b 1
+    )
 )
 
 REM Free port 8002 if something is already using it
