@@ -24,3 +24,7 @@ class FileContent(BaseModel):
 
 class ReorderRequest(BaseModel):
     collection: CollectionStructure
+
+
+class ImportRequest(BaseModel):
+    content: str

@@ -14,9 +14,12 @@ export interface ProjectChipProps {
   onOpenProjectMd: () => void;
   onRefresh: () => Promise<void>;
   onCreateFile: (filename: string) => Promise<void>;
+  onOpenYaml: () => void;
+  onImport: (format: "mkdocs" | "docusaurus") => void;
+  onExport: (format: "mkdocs" | "docusaurus") => void;
 }
 
-export default function ProjectChip({ currentProject, currentProjectTitle, projects, titleMode, setTitleMode, onSwitchProject, onCreateProject, onRenameProject, onOpenProjectMd, onRefresh, onCreateFile }: ProjectChipProps) {
+export default function ProjectChip({ currentProject, currentProjectTitle, projects, titleMode, setTitleMode, onSwitchProject, onCreateProject, onRenameProject, onOpenProjectMd, onRefresh, onCreateFile, onOpenYaml, onImport, onExport }: ProjectChipProps) {
   const [renamingProject, setRenamingProject] = useState(false);
   const [renameProjectValue, setRenameProjectValue] = useState("");
   const [renameProjectError, setRenameProjectError] = useState("");
@@ -25,6 +28,8 @@ export default function ProjectChip({ currentProject, currentProjectTitle, proje
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
   const [projectSubmenuOpen, setProjectSubmenuOpen] = useState(false);
+  const [importSubmenuOpen, setImportSubmenuOpen] = useState(false);
+  const [exportSubmenuOpen, setExportSubmenuOpen] = useState(false);
   const menuRef = useRef<HTMLSpanElement>(null);
   const menuButtonRef = useRef<HTMLSpanElement>(null);
 
@@ -158,7 +163,7 @@ export default function ProjectChip({ currentProject, currentProjectTitle, proje
                 onMouseLeave={() => setProjectSubmenuOpen(false)}
               >
                 <span>Projects</span>
-                <span style={{ fontSize: "11px", color: "#999" }}>▸</span>
+                <span style={{ fontSize: "24px", color: "#999" }}>▸</span>
                 {projectSubmenuOpen && (
                   <div style={{
                     position: "absolute", left: "100%", top: 0, zIndex: 101,
@@ -184,6 +189,60 @@ export default function ProjectChip({ currentProject, currentProjectTitle, proje
                 onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#f5f5f5"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
               >Info</div>
+
+              <div style={{ ...menuItem }}
+                onClick={() => { onOpenYaml(); setMenuOpen(false); }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#f5f5f5"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
+              >View YAML</div>
+
+              <div
+                style={{ ...menuItem, justifyContent: "space-between", position: "relative" }}
+                onMouseEnter={() => setImportSubmenuOpen(true)}
+                onMouseLeave={() => setImportSubmenuOpen(false)}
+              >
+                <span>Import from...</span>
+                <span style={{ fontSize: "24px", color: "#999" }}>▸</span>
+                {importSubmenuOpen && (
+                  <div style={{
+                    position: "absolute", left: "100%", top: 0, zIndex: 101,
+                    background: "#fff", border: "1px solid #d0e8f7", borderRadius: "6px",
+                    boxShadow: "0 4px 16px rgba(0,0,0,0.12)", minWidth: "160px", overflow: "hidden",
+                  }}>
+                    {(["mkdocs", "docusaurus"] as const).map(fmt => (
+                      <div key={fmt} style={{ ...menuItem }}
+                        onClick={() => { onImport(fmt); setMenuOpen(false); setImportSubmenuOpen(false); }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#f5f5f5"; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
+                      >{fmt === "mkdocs" ? "MkDocs" : "Docusaurus"}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div
+                style={{ ...menuItem, justifyContent: "space-between", position: "relative" }}
+                onMouseEnter={() => setExportSubmenuOpen(true)}
+                onMouseLeave={() => setExportSubmenuOpen(false)}
+              >
+                <span>Export to...</span>
+                <span style={{ fontSize: "24px", color: "#999" }}>▸</span>
+                {exportSubmenuOpen && (
+                  <div style={{
+                    position: "absolute", left: "100%", top: 0, zIndex: 101,
+                    background: "#fff", border: "1px solid #d0e8f7", borderRadius: "6px",
+                    boxShadow: "0 4px 16px rgba(0,0,0,0.12)", minWidth: "160px", overflow: "hidden",
+                  }}>
+                    {(["mkdocs", "docusaurus"] as const).map(fmt => (
+                      <div key={fmt} style={{ ...menuItem }}
+                        onClick={() => { onExport(fmt); setMenuOpen(false); setExportSubmenuOpen(false); }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#f5f5f5"; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
+                      >{fmt === "mkdocs" ? "MkDocs" : "Docusaurus"}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <div style={{ ...menuItem }}
                 onClick={() => { onRefresh(); setMenuOpen(false); }}

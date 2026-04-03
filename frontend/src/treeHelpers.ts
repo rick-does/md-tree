@@ -76,6 +76,17 @@ export function insertAsChild(nodes: FileNode[], parentPath: string, node: FileN
   });
 }
 
+export function insertAsLastChild(nodes: FileNode[], parentPath: string, node: FileNode): FileNode[] {
+  return nodes.map((n) => {
+    if (n.path === parentPath) {
+      const children = [...(n.children ?? []), { ...node, order: (n.children ?? []).length }];
+      return { ...n, children };
+    }
+    if (n.children) return { ...n, children: insertAsLastChild(n.children, parentPath, node) };
+    return n;
+  });
+}
+
 export function reorder(nodes: FileNode[]): FileNode[] {
   return nodes.map((n, i) => ({
     ...n,

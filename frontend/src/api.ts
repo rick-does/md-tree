@@ -142,3 +142,23 @@ export async function fetchOrphans(project: string): Promise<FileInfo[]> {
   if (!r.ok) throw new Error("Failed to fetch orphans");
   return r.json();
 }
+
+export async function importFromFormat(project: string, format: string, content: string): Promise<{ warnings: string[]; node_count: number }> {
+  const r = await fetch(`${BASE}/projects/${project}/import/${format}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content }),
+  });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error(err.detail ?? "Import failed");
+  }
+  return r.json();
+}
+
+export async function exportToFormat(project: string, format: string): Promise<string> {
+  const r = await fetch(`${BASE}/projects/${project}/export/${format}`);
+  if (!r.ok) throw new Error("Export failed");
+  const data = await r.json();
+  return data.content;
+}

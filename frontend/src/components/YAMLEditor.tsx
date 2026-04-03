@@ -38,8 +38,8 @@ export default function YAMLEditor({ yamlContent, onYamlChange, onSaved, viMode,
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "#1a1a2e" }} onKeyDown={handleKeyDown}>
-      <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 12px", borderBottom: "1px solid #333", background: "#16213e", flexShrink: 0 }}>
-        <span style={{ color: "#aaa", fontSize: "12px", flex: 1 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 12px", borderBottom: "1px solid #333", background: "#16213e", flexShrink: 0 }}>
+        <span style={{ color: "#888", fontSize: "14px", flex: 1 }}>
           collection.yaml{readOnly ? " — read-only view" : " — hierarchy structure"}
         </span>
         {!readOnly && (

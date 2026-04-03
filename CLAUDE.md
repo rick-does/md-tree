@@ -79,7 +79,7 @@ Spacer IS the drop indicator — no colored lines. Ghost chip only shown for nes
 - **Optimistic title sync** — H1 parsed from content on save and sidebar title updated immediately without a server round-trip
 - **`key={...}` on MarkdownEditor** — forces full remount on file/project switch, cleanly resetting CodeMirror state
 - **`handleCreateChildFile`** fetches fresh collection → `removeNode` → `insertAsChild` → `saveCollection` → `setCollection` directly — does NOT call `loadCollection` (would overwrite the local insert)
-- **`insertAsChild` prepends** — new children added at top of list, not appended; ghost chip reflects this
+- **`insertAsChild` prepends** — new children added at top of list, not appended; ghost chip reflects this. `insertAsLastChild` appends (used by ArrowRight keyboard nesting)
 - **Menu positioning**: Both ProjectChip and SortableItem menus use `position: fixed` + `getBoundingClientRect()` measured on click — escapes `overflow: hidden` clipping in the sidebar. Coordinates stored in `menuPos` state.
 - **Menu close**: `document.addEventListener("mousedown")` in `useEffect` — no backdrop, so clicking another button closes the menu AND triggers that button in one click
 - **Backend orphan sort**: `get_all_md_files` returns files by `st_mtime` descending — powers "Recent" mode
@@ -87,18 +87,22 @@ Spacer IS the drop indicator — no colored lines. Ghost chip only shown for nes
 - **`lineWrapping`** on CodeMirror — prevents horizontal overflow into preview pane
 - **Overlay width**: `1119px` fixed; both editor and preview panes `flex: 0 0 559px`
 - **Rename from editor toolbar**: double-click the filename in the editor top bar triggers inline rename (same `handleRenameFile` as sidebar chips). `onRename` prop not passed to project-md editor (path is fixed).
+- **Import/Export adapters**: `backend/converters.py` has pure functions for MkDocs/Docusaurus ↔ collection.yaml conversion. Category-only nodes (no file) are flattened — children promoted to parent level. Import replaces collection; export generates config text for clipboard.
+- **OrphanPane**: extracted from Sidebar into its own component. Drag-coupled state (`selectedOrphans`, `orphanOrder`, `orphanSort`, refs) stays in Sidebar; file creation and expand/collapse state lives in OrphanPane.
+- **D-pad arrow buttons**: in left 1-inch margin, vertically aligned with orphan pane arrow via runtime `getBoundingClientRect()`. Appears when a hierarchy item is selected.
+- **YAML viewer**: read-only — opened from project chip menu "View YAML". Not editable.
 
 ---
 
 ## Known Issues / Dead Code
 
-- `HierarchyView.tsx` and `YAMLModal.tsx` — unused legacy components, safe to ignore
+- `HierarchyView.tsx` — unused legacy component, safe to ignore
 - `projects/` directory tracked in git (deliberate, for development testing)
 
 ---
 
 ## TODO
 
-1. **Import from mkdocs.yml** — parse `nav:` from an existing MkDocs config into collection.yaml
-2. **Keyboard-only reorder** — left/right nest/unnest works; cross-level up/down not yet supported
+1. ~~**Import/Export**~~ — done: MkDocs and Docusaurus import/export via project chip menu
+2. ~~**Keyboard-only reorder**~~ — done: left/right nest/unnest, up/down cross-level movement between parent nodes
 3. **Search/filter** — find files by name (deprioritized)

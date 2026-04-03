@@ -20,13 +20,13 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { FileNode, CollectionStructure, FileInfo, ProjectInfo } from "../types";
-import { createFile, fetchCollection, saveCollection } from "../api";
 import {
   flatIds,
   removeNode,
   insertBefore,
   insertAfter,
   insertAsChild,
+  insertAsLastChild,
   reorder,
   findSiblingList,
   findParent,
@@ -34,7 +34,7 @@ import {
 } from "../treeHelpers";
 import { GAP, COL_W, TOP_SENTINEL } from "./SidebarConstants";
 import { SortableItem } from "./SortableItem";
-import { OrphanItem } from "./OrphanItem";
+import OrphanPane from "./OrphanPane";
 import ProjectChip from "./ProjectChip";
 
 // ── Collision detection ───────────────────────────────────────────────────────
@@ -88,11 +88,12 @@ interface SidebarProps {
   onUndo: () => void;
   canUndo: boolean;
   undoPath: string | null;
+  onImport: (format: "mkdocs" | "docusaurus") => void;
+  onExport: (format: "mkdocs" | "docusaurus") => void;
 }
 
-export default function Sidebar({ collection, selectedPath, onSelect, onOpen, onCollectionChange, onCreateFile, onDeleteFile, onRenameFile, onCreateChildFile, onOpenYaml, yamlOpen, orphans, currentProject, currentProjectTitle, projects, onSwitchProject, onCreateProject, onDeleteProject, onRenameProject, onOpenProjectMd, onRefresh, onUndo, canUndo, undoPath }: SidebarProps) {
+export default function Sidebar({ collection, selectedPath, onSelect, onOpen, onCollectionChange, onCreateFile, onDeleteFile, onRenameFile, onCreateChildFile, onOpenYaml, yamlOpen, orphans, currentProject, currentProjectTitle, projects, onSwitchProject, onCreateProject, onDeleteProject, onRenameProject, onOpenProjectMd, onRefresh, onUndo, canUndo, undoPath, onImport, onExport }: SidebarProps) {
   const [titleMode, setTitleMode] = useState(false);
-  const [orphansExpanded, setOrphansExpanded] = useState(true);
   const [orphanSort, setOrphanSort] = useState<"recent" | "alpha" | "custom">("recent");
   const [orphanOrder, setOrphanOrder] = useState<string[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(flatIds(collection.root)));
@@ -101,10 +102,9 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
   const [dragDeltaX, setDragDeltaX] = useState(0);
   const prevMoveRef = useRef<{ overId: string | null; zone: string }>({ overId: null, zone: "" });
   const treeRef = useRef<HTMLDivElement>(null);
-  const orphanInputRef = useRef<HTMLInputElement>(null);
-  const [creatingOrphanFile, setCreatingOrphanFile] = useState(false);
-  const [orphanNewFileName, setOrphanNewFileName] = useState("");
-  const [orphanCreateError, setOrphanCreateError] = useState("");
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const orphanArrowRef = useRef<HTMLButtonElement>(null);
+  const [dpadTop, setDpadTop] = useState<number | null>(null);
   const [selectedOrphans, setSelectedOrphans] = useState<Set<string>>(new Set());
   const [rubberBand, setRubberBand] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
   const orphanSectionRef = useRef<HTMLDivElement>(null);
@@ -121,6 +121,13 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
   }, [collection]);
 
   useEffect(() => { setSelectedOrphans(new Set()); setOrphanOrder([]); setOrphanSort("recent"); }, [currentProject]);
+
+  useEffect(() => {
+    if (!orphanArrowRef.current || !sidebarRef.current) { setDpadTop(null); return; }
+    const sidebarRect = sidebarRef.current.getBoundingClientRect();
+    const btnRect = orphanArrowRef.current.getBoundingClientRect();
+    setDpadTop(btnRect.top + btnRect.height / 2 - sidebarRect.top);
+  }, [orphans, selectedPath]);
 
   // Keep orphanOrder in sync: preserve existing order, append new arrivals, drop removed
   useEffect(() => {
@@ -148,22 +155,6 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
     onCollectionChange({ root: reorder([...collection.root, ...newNodes]) }, paths.length === 1 ? paths[0] : undefined);
     setSelectedOrphans(new Set());
     setTimeout(() => onRefresh(), 300);
-  };
-
-  const submitOrphanFile = async () => {
-    let name = orphanNewFileName.trim();
-    if (!name) return;
-    if (!name.endsWith(".md")) name += ".md";
-    if (/[/\\<>:"|?*]/.test(name.replace(/\.md$/, ""))) { setOrphanCreateError("Invalid filename characters"); return; }
-    try {
-      await createFile(currentProject, name);
-      const fresh = await fetchCollection(currentProject);
-      const [newRoot] = removeNode(fresh.root, name);
-      await saveCollection(currentProject, { root: reorder(newRoot) });
-      setCreatingOrphanFile(false); setOrphanNewFileName(""); setOrphanCreateError("");
-      await onRefresh();
-      onOpen(name);
-    } catch (e: any) { setOrphanCreateError(e.message ?? "Error creating file"); }
   };
 
   const startRubberBand = (e: React.MouseEvent) => {
@@ -222,7 +213,7 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
       const [withoutNode, node] = removeNode(root, selectedPath);
       if (!node) return;
       const prevSibling = found.list[found.idx - 1];
-      onCollectionChange({ root: reorder(insertAsChild(withoutNode, prevSibling.path, node)) });
+      onCollectionChange({ root: reorder(insertAsLastChild(withoutNode, prevSibling.path, node)) });
       setExpanded(prev => { const s = new Set(prev); s.add(prevSibling.path); return s; });
       refocusTree();
       return;
@@ -241,9 +232,18 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
       if (nr !== root) { onCollectionChange({ root: reorder(nr) }); refocusTree(); return; }
       const parent = findParent(root, selectedPath);
       if (!parent) return;
-      const [withoutNode, node] = removeNode(root, selectedPath);
-      if (!node) return;
-      onCollectionChange({ root: reorder(insertBefore(withoutNode, parent.path, node)) });
+      const parentSiblings = findSiblingList(root, parent.path);
+      if (parentSiblings && parentSiblings.idx > 0) {
+        const prevUncle = parentSiblings.list[parentSiblings.idx - 1];
+        const [withoutNode, node] = removeNode(root, selectedPath);
+        if (!node) return;
+        onCollectionChange({ root: reorder(insertAsLastChild(withoutNode, prevUncle.path, node)) });
+        setExpanded(prev => { const s = new Set(prev); s.add(prevUncle.path); return s; });
+      } else {
+        const [withoutNode, node] = removeNode(root, selectedPath);
+        if (!node) return;
+        onCollectionChange({ root: reorder(insertBefore(withoutNode, parent.path, node)) });
+      }
       refocusTree();
       return;
     }
@@ -252,12 +252,26 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
       if (nr !== root) { onCollectionChange({ root: reorder(nr) }); refocusTree(); return; }
       const parent = findParent(root, selectedPath);
       if (!parent) return;
-      const [withoutNode, node] = removeNode(root, selectedPath);
-      if (!node) return;
-      onCollectionChange({ root: reorder(insertAfter(withoutNode, parent.path, node)) });
+      const parentSiblings = findSiblingList(root, parent.path);
+      if (parentSiblings && parentSiblings.idx < parentSiblings.list.length - 1) {
+        const nextUncle = parentSiblings.list[parentSiblings.idx + 1];
+        const [withoutNode, node] = removeNode(root, selectedPath);
+        if (!node) return;
+        onCollectionChange({ root: reorder(insertAsChild(withoutNode, nextUncle.path, node)) });
+        setExpanded(prev => { const s = new Set(prev); s.add(nextUncle.path); return s; });
+      } else {
+        const [withoutNode, node] = removeNode(root, selectedPath);
+        if (!node) return;
+        onCollectionChange({ root: reorder(insertAfter(withoutNode, parent.path, node)) });
+      }
       refocusTree();
     }
   }, [selectedPath, collection, expanded, onCollectionChange, setExpanded]);
+
+  const fireArrow = useCallback((dir: string) => {
+    handleKeyDown({ key: `Arrow${dir.charAt(0).toUpperCase() + dir.slice(1)}`, preventDefault: () => {}, target: { tagName: "DIV" } } as any);
+    refocusTree();
+  }, [handleKeyDown]);
 
   function computeNewRoot(dragged: string, target: string, deltaX: number): FileNode[] | null {
     if (target === TOP_SENTINEL) {
@@ -373,7 +387,23 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
   })() : "";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "#ffffff", marginLeft: "1in", marginRight: "1in" }}>
+    <div ref={sidebarRef} style={{ display: "flex", flexDirection: "column", height: "100%", background: "#ffffff", paddingLeft: "1in", marginRight: "1in", position: "relative" }}>
+
+      {selectedPath && (
+        <div style={{ position: "absolute", left: 0, top: dpadTop ?? 280, width: "1in", display: "flex", justifyContent: "center", zIndex: 5, transform: "translateY(-50%)" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "auto auto auto" }}>
+            <div />
+            <button onClick={() => fireArrow("up")} title="Move up (↑)" style={{ background: "transparent", border: "1px solid #d0e8f7", cursor: "pointer", padding: "4px 6px", fontSize: "13px", color: "#1a6fa8", borderRadius: "3px", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#e8f4fd"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>▲</button>
+            <div />
+            <button onClick={() => fireArrow("left")} title="Unnest (←)" style={{ background: "transparent", border: "1px solid #d0e8f7", cursor: "pointer", padding: "4px 5px", fontSize: "13px", color: "#1a6fa8", borderRadius: "3px", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#e8f4fd"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>◀</button>
+            <div style={{ width: "4px" }} />
+            <button onClick={() => fireArrow("right")} title="Nest (→)" style={{ background: "transparent", border: "1px solid #d0e8f7", cursor: "pointer", padding: "4px 5px", fontSize: "13px", color: "#1a6fa8", borderRadius: "3px", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#e8f4fd"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>▶</button>
+            <div />
+            <button onClick={() => fireArrow("down")} title="Move down (↓)" style={{ background: "transparent", border: "1px solid #d0e8f7", cursor: "pointer", padding: "4px 6px", fontSize: "13px", color: "#1a6fa8", borderRadius: "3px", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#e8f4fd"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>▼</button>
+            <div />
+          </div>
+        </div>
+      )}
 
       <DndContext sensors={sensors} collisionDetection={deepestPointerCollision} onDragStart={handleDragStart} onDragMove={handleDragMove} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
         <SortableContext items={allIds} strategy={verticalListSortingStrategy}>
@@ -395,6 +425,9 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
                   onOpenProjectMd={onOpenProjectMd}
                   onRefresh={onRefresh}
                   onCreateFile={onCreateFile}
+                  onOpenYaml={onOpenYaml}
+                  onImport={onImport}
+                  onExport={onExport}
                 />
               )}
 
@@ -435,110 +468,17 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
               )}
             </div>
 
-            {/* Right wrapper: tab button + (arrow column + orphan pane) */}
             {orphans.length > 0 && (
-              <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", minHeight: 0 }}>
-                {/* Tab button at top */}
-                <div style={{ flexShrink: 0, paddingLeft: "100px" }}>
-                  <button
-                    onClick={() => setOrphansExpanded(e => !e)}
-                    style={{
-                      background: "#1a6fa8", border: "none", borderRadius: "4px 4px 0 0",
-                      padding: "5px 12px", cursor: "pointer",
-                      display: "flex", alignItems: "center", gap: "6px",
-                      fontSize: "12px", fontWeight: 500, color: "#fff",
-                    }}
-                  >
-                    <span style={{ color: "#f90" }}>⚠</span>
-                    <span>Orphans</span>
-                    <span style={{ fontSize: "10px" }}>{orphansExpanded ? "▾" : "▸"}</span>
-                  </button>
-                </div>
-                {/* Content row: arrow column + orphan pane */}
-                {orphansExpanded && (
-                  <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
-                    {/* Arrow column — between hierarchy and orphan pane */}
-                    <div style={{ width: "100px", flexShrink: 0, position: "relative" }}>
-                      <div style={{ position: "absolute", top: 200, left: 0, right: 0, display: "flex", justifyContent: "center" }}>
-                        <button
-                          onClick={() => { if (selectedOrphans.size > 0) addOrphansToCollection([...selectedOrphans]); }}
-                          title={selectedOrphans.size > 0 ? `Add ${selectedOrphans.size} to hierarchy` : "Select orphans to add"}
-                          style={{
-                            background: selectedOrphans.size > 0 ? "#1a6fa8" : "#e0e0e0",
-                            border: `1.5px solid ${selectedOrphans.size > 0 ? "#1a6fa8" : "#aaa"}`,
-                            borderRadius: "4px", padding: "7px 9px",
-                            cursor: selectedOrphans.size > 0 ? "pointer" : "default",
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            color: selectedOrphans.size > 0 ? "#fff" : "#888",
-                          }}
-                        >
-                          <svg width="22" height="14" viewBox="0 0 22 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <line x1="21" y1="7" x2="1" y2="7"/>
-                            <polyline points="7 1 1 7 7 13"/>
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                    {/* Orphan pane */}
-                    <div ref={orphanSectionRef} style={{ width: "360px", overflowY: "auto", minHeight: 0, padding: `${GAP}px 8px 8px 8px`, position: "relative", userSelect: "none" }}>
-                      <div style={{ padding: "4px 0 6px", borderBottom: "1px solid #d0e8f7", display: "flex", alignItems: "center", gap: "18px", position: "sticky", top: 0, background: "#fff", zIndex: 1 }}>
-                        <div style={{ display: "flex", border: "1px solid #b3d9f7", borderRadius: "4px", overflow: "hidden" }}>
-                          {(([["recent", "Recent"], ["alpha", "A→Z"], ["custom", "Custom"]] as const)).map(([mode, label], i) => (
-                            <button key={mode} onClick={() => setOrphanSort(mode)} style={{ padding: "2px 8px", border: "none", borderRight: i < 2 ? "1px solid #b3d9f7" : "none", cursor: "pointer", fontSize: "11px", background: orphanSort === mode ? "#1a6fa8" : "#e8f4fd", color: orphanSort === mode ? "#fff" : "#1a6fa8" }}>{label}</button>
-                          ))}
-                        </div>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setCreatingOrphanFile(true); setOrphanNewFileName(""); setOrphanCreateError(""); setTimeout(() => orphanInputRef.current?.focus(), 50); }}
-                          style={{ padding: "2px 6px", fontSize: "11px", background: "#e8f4fd", color: "#1a6fa8", border: "1px solid #b3d9f7", borderRadius: "4px", cursor: "pointer", whiteSpace: "nowrap" }}
-                        >Add File</button>
-                      </div>
-                      {creatingOrphanFile && (
-                        <div style={{ marginBottom: "6px", display: "flex", flexDirection: "column", gap: "3px" }}>
-                          <div style={{ display: "flex", gap: "4px" }}>
-                            <input
-                              ref={orphanInputRef}
-                              value={orphanNewFileName}
-                              onChange={(e) => { setOrphanNewFileName(e.target.value); setOrphanCreateError(""); }}
-                              onKeyDown={(e) => { if (e.key === "Enter") submitOrphanFile(); if (e.key === "Escape") { setCreatingOrphanFile(false); setOrphanNewFileName(""); setOrphanCreateError(""); } }}
-                              placeholder="filename.md"
-                              style={{ padding: "4px 6px", background: "#fff", border: "1px solid #b3d9f7", borderRadius: "3px", color: "#1a1a1a", fontSize: "12px", outline: "none", width: "140px" }}
-                            />
-                            <button onClick={submitOrphanFile} style={{ padding: "4px 8px", background: "#3a7d44", border: "none", borderRadius: "3px", color: "#fff", fontSize: "12px", cursor: "pointer" }}>✓</button>
-                            <button onClick={() => { setCreatingOrphanFile(false); setOrphanNewFileName(""); setOrphanCreateError(""); }} style={{ padding: "4px 8px", background: "#aaa", border: "none", borderRadius: "3px", color: "#fff", fontSize: "12px", cursor: "pointer" }}>✕</button>
-                          </div>
-                          {orphanCreateError && <div style={{ color: "#f66", fontSize: "11px" }}>{orphanCreateError}</div>}
-                        </div>
-                      )}
-                      {(orphanSort === "alpha"
-                        ? [...orphans].sort((a, b) => (titleMode ? a.title : a.path).localeCompare(titleMode ? b.title : b.path))
-                        : orphanSort === "custom"
-                        ? orphanOrder.flatMap(p => { const o = orphans.find(x => x.path === p); return o ? [o] : []; })
-                        : orphans
-                      ).map((o) => (
-                        <OrphanItem
-                          key={o.path} path={o.path} title={o.title} titleMode={titleMode}
-                          isMultiSelected={selectedOrphans.has(o.path)}
-                          onMultiSelect={handleOrphanSelect}
-                          onAddToSelection={(path) => setSelectedOrphans(prev => { const next = new Set(prev); next.add(path); return next; })}
-                          onOpen={onOpen} onDelete={handleDelete} onAddToHierarchy={(p) => addOrphansToCollection([p])} currentProject={currentProject}
-                          setChipRef={(el) => { if (el) orphanChipRefs.current.set(o.path, el); else orphanChipRefs.current.delete(o.path); }}
-                          activeId={activeId} undoPath={undoPath} onUndo={onUndo} canUndo={canUndo}
-                        />
-                      ))}
-                      {rubberBand && (
-                        <div style={{
-                          position: "fixed", pointerEvents: "none", zIndex: 50,
-                          left: Math.min(rubberBand.x1, rubberBand.x2),
-                          top: Math.min(rubberBand.y1, rubberBand.y2),
-                          width: Math.abs(rubberBand.x2 - rubberBand.x1),
-                          height: Math.abs(rubberBand.y2 - rubberBand.y1),
-                          border: "1px dashed #1a6fa8", background: "rgba(26,111,168,0.08)",
-                        }} />
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
+              <OrphanPane
+                orphans={orphans} titleMode={titleMode} activeId={activeId} currentProject={currentProject}
+                selectedOrphans={selectedOrphans} onOrphanSelect={handleOrphanSelect}
+                onAddToSelection={(path) => setSelectedOrphans(prev => { const next = new Set(prev); next.add(path); return next; })}
+                orphanSort={orphanSort} setOrphanSort={setOrphanSort} orphanOrder={orphanOrder}
+                rubberBand={rubberBand} orphanSectionRef={orphanSectionRef} orphanChipRefs={orphanChipRefs}
+                onOpen={onOpen} onDelete={handleDelete} onAddOrphansToCollection={addOrphansToCollection} onRefresh={onRefresh}
+                undoPath={undoPath} onUndo={onUndo} canUndo={canUndo}
+                arrowBtnRef={orphanArrowRef}
+              />
             )}
 
           </div>

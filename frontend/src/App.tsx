@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Sidebar from "./components/Sidebar";
 import MarkdownEditor from "./components/MarkdownEditor";
 import YAMLEditor from "./components/YAMLEditor";
+import ImportModal from "./components/ImportModal";
+import ExportModal from "./components/ExportModal";
 import {
   listProjects, createProject, deleteProject, renameProject,
   fetchProjectMd, saveProjectMd,
@@ -32,6 +34,8 @@ export default function App() {
   type UndoEntry = { snapshot: CollectionStructure; movedPath: string | null };
   const [undoStack, setUndoStack] = useState<UndoEntry[]>([]);
   const [undoPath, setUndoPath] = useState<string | null>(null);
+  const [importModal, setImportModal] = useState<{ format: "mkdocs" | "docusaurus" } | null>(null);
+  const [exportModal, setExportModal] = useState<{ format: "mkdocs" | "docusaurus" } | null>(null);
 
   const editorContentRef = useRef(editorContent);
   const savedContentRef = useRef(savedContent);
@@ -292,6 +296,8 @@ export default function App() {
           onUndo={handleUndo}
           canUndo={undoStack.length > 0}
           undoPath={undoPath}
+          onImport={(fmt) => setImportModal({ format: fmt })}
+          onExport={(fmt) => setExportModal({ format: fmt })}
         />
       </div>
 
@@ -343,6 +349,23 @@ export default function App() {
         <div style={{ position: "fixed", bottom: "16px", left: "50%", transform: "translateX(-50%)", background: "#c00", color: "#fff", padding: "8px 16px", borderRadius: "4px", fontSize: "13px" }}>
           {error}
         </div>
+      )}
+
+      {importModal && currentProject && (
+        <ImportModal
+          format={importModal.format}
+          project={currentProject}
+          onClose={() => setImportModal(null)}
+          onImported={() => { setImportModal(null); loadCollection(currentProject); }}
+        />
+      )}
+
+      {exportModal && currentProject && (
+        <ExportModal
+          format={exportModal.format}
+          project={currentProject}
+          onClose={() => setExportModal(null)}
+        />
       )}
     </div>
   );

@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from models import CollectionStructure, FileContent, FileNode, ReorderRequest
+from models import CollectionStructure, FileContent, FileNode, ReorderRequest, ImportRequest
 from utils import (
     PROJECTS_DIR,
     safe_path,
@@ -259,6 +259,49 @@ def save_collection_yaml(project_name: str, body: dict):
         raise HTTPException(status_code=400, detail=f"Invalid YAML: {e}")
     collection_file.write_text(raw, encoding="utf-8")
     return {"status": "ok"}
+
+
+# ── Import / Export ───────────────────────────────────────────────────────────
+
+from converters import parse_mkdocs_nav, parse_docusaurus_sidebar, export_mkdocs_nav, export_docusaurus_sidebar
+
+
+@app.post("/api/projects/{project_name}/import/mkdocs")
+def import_mkdocs(project_name: str, req: ImportRequest):
+    existing = {f["path"] for f in get_all_md_files(project_name)}
+    try:
+        collection, warnings = parse_mkdocs_nav(req.content, existing)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    save_collection(project_name, collection)
+    return {"status": "ok", "warnings": warnings, "node_count": len(flatten_collection(collection.root))}
+
+
+@app.post("/api/projects/{project_name}/import/docusaurus")
+def import_docusaurus(project_name: str, req: ImportRequest):
+    existing = {f["path"] for f in get_all_md_files(project_name)}
+    try:
+        collection, warnings = parse_docusaurus_sidebar(req.content, existing)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    save_collection(project_name, collection)
+    return {"status": "ok", "warnings": warnings, "node_count": len(flatten_collection(collection.root))}
+
+
+@app.get("/api/projects/{project_name}/export/mkdocs")
+def export_mkdocs(project_name: str):
+    collection = load_collection(project_name)
+    sync_collection_with_files(project_name, collection)
+    content = export_mkdocs_nav(collection)
+    return {"content": content}
+
+
+@app.get("/api/projects/{project_name}/export/docusaurus")
+def export_docusaurus(project_name: str):
+    collection = load_collection(project_name)
+    sync_collection_with_files(project_name, collection)
+    content = export_docusaurus_sidebar(collection)
+    return {"content": content}
 
 
 # ── Serve frontend ─────────────────────────────────────────────────────────────
