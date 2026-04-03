@@ -3,8 +3,31 @@ set -e
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 
-echo "==> Markdown Collection Editor"
+echo "==> .mdTree"
 echo ""
+
+# Check for Node.js / npm
+if ! command -v node &>/dev/null; then
+  echo "ERROR: Node.js is not installed."
+  echo ""
+  echo "Please install the LTS version from: https://nodejs.org"
+  echo "Then run this script again."
+  exit 1
+fi
+if ! command -v npm &>/dev/null; then
+  echo "ERROR: npm was not found. Please reinstall Node.js from: https://nodejs.org"
+  echo "Then run this script again."
+  exit 1
+fi
+
+# Check for Python
+if ! command -v python3 &>/dev/null; then
+  echo "ERROR: Python 3 is not installed."
+  echo ""
+  echo "Please install Python 3.12 or later from: https://www.python.org/downloads"
+  echo "Then run this script again."
+  exit 1
+fi
 
 # Build frontend
 echo "==> Building frontend..."

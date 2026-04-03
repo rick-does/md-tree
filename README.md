@@ -23,9 +23,7 @@ Files that exist in `markdowns/` but aren't placed in the hierarchy yet appear i
 
 ## Getting started
 
-**Requirements:** Python 3.12+, Node.js 18+
-
-On first run the start script will automatically create a Python virtual environment and install all dependencies.
+**Requirements:** [Python 3.12+](https://www.python.org/downloads) and [Node.js LTS](https://nodejs.org) must be installed before running. The start script will handle everything else automatically — virtual environment setup, Python packages, and npm dependencies.
 
 **Windows:**
 ```bat
