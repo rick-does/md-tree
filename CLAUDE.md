@@ -86,11 +86,15 @@ md-tree/
         ├── types.ts          # FileNode, CollectionStructure, FileInfo, ProjectInfo types
         ├── treeHelpers.ts    # Pure tree manipulation: insert, remove, reorder, depth
         └── components/
-            ├── Sidebar.tsx        # Project chip + drag-drop tree + orphans section
-            ├── MarkdownEditor.tsx # Split/edit/preview editor with save
-            ├── CodeEditor.tsx     # CodeMirror 6 wrapper (markdown + YAML)
-            ├── YAMLEditor.tsx     # Full-screen YAML editor for collection.yaml
-            └── YAMLModal.tsx      # (unused/legacy)
+            ├── Sidebar.tsx          # DndContext, drag logic, orphan sort/order, layout
+            ├── SortableItem.tsx     # Recursive tree chip: chevron, connectors, ghost, menu
+            ├── OrphanItem.tsx       # Orphan chip: drag, preview, menu, undo button
+            ├── ProjectChip.tsx      # Project header chip: title, menu (fixed-position)
+            ├── SidebarConstants.ts  # LINE, COL_W, GAP, TOP_SENTINEL
+            ├── MarkdownEditor.tsx   # Split/edit/preview editor with save
+            ├── CodeEditor.tsx       # CodeMirror 6 wrapper (markdown + YAML)
+            ├── YAMLEditor.tsx       # Full-screen YAML editor for collection.yaml
+            └── YAMLModal.tsx        # (unused/legacy)
 ```
 
 The frontend is built to `frontend/dist/` and served as static files by FastAPI, so there is
@@ -182,15 +186,31 @@ double-transform glitches) containing all node IDs (tree + orphans combined).
   transformed div; applying transforms independently causes double-shift and cascades to vanish
 - Dragged item: `opacity: 0`, transform suppressed (invisible; shown only via DragOverlay)
 - `handleDragMove` throttled via `prevMoveRef` — only re-renders when overId or zone (nest/sibling/unnest) changes, not on every pixel
+- Custom collision detection: `deepestPointerCollision` uses `pointerWithin` + smallest-rect preference — fixes 3-level hierarchy where parent rect swallows children
 
-Drop indicator logic:
-- `dragDeltaX > 30` → **nest** as child (green outline)
-- `dragDeltaX < -30` → **unnest** to parent level (orange line)
-- otherwise → **sibling** reorder (blue line)
+**Drop zone logic** (`dragDeltaX` = total horizontal movement from drag start):
+- `dragDeltaX > 30` → **nest** as first child: shows ghost chip + connector lines at depth+1 below target
+- `dragDeltaX < -30` → **unnest** to parent level: shows chip-height spacer at parent indentation
+- otherwise → **sibling** reorder: shows chip-height spacer at same indentation
+- No colored indicator lines — spacer IS the indicator; ghost chip shown only for nest action
+
+**Drop spacer/ghost rendering (SortableItem.tsx):**
+- Sibling/unnest: `<div style={{ height: "40px", marginLeft: connectorWidth }}/>` rendered after the flex chip row
+- Nest ghost: connector lines at `depth+1` + dimmed chip showing `activeLabel` (dragged item's label), rendered after chip row, before children
+- `connectorWidth = (ancestors.length + 1) * COL_W`
+- `activeLabel` prop threads through all recursive SortableItem calls from Sidebar
+
+**Orphan custom ordering:**
+- `orphanSort: "recent" | "alpha" | "custom"` state in Sidebar
+- `orphanOrder: string[]` synced via useEffect (preserve order, append new, drop removed)
+- Drag-to-reorder within orphan list auto-switches to `"custom"` mode
+- Three-button toggle: Recent | A→Z | Custom
+- Project switch resets both to `[]` / `"recent"`
 
 ### Undo
 - Ctrl+Z / Cmd+Z globally, or click ↩ on the last-moved chip
-- Stack stores `{snapshot: CollectionStructure, movedPath: string | null}` — popping reveals the previous movedPath so ↩ always appears on the right chip
+- Stack stores `{snapshot: CollectionStructure, movedPath: string | null}`
+- **Undo is a toggle**: `handleUndo` replaces the top stack entry with `{snapshot: collection, movedPath: entry.movedPath}` instead of popping — clicking ↩ again reverses the undo
 - Only tree reorders are undoable (file create/delete/rename have disk side effects)
 - Stack clears on project switch
 
@@ -234,6 +254,16 @@ The backend auto-reloads on Python file changes. Frontend requires a rebuild to 
 
 ---
 
+## Key Design Decisions (additional)
+
+- **Menu positioning**: ProjectChip menu uses `position: fixed` with `getBoundingClientRect()` measured on click — avoids clipping by `overflow: hidden` flex parents. SortableItem menu lives inside the ⋮ `<span>` with `top:"50%", left:"50%"` so the top-left corner lands at the center of the ⋮ button.
+- **Menu close without backdrop**: `document.addEventListener("mousedown", handler)` in `useEffect` (not a fixed backdrop overlay) — allows click-through so clicking another button both closes the menu AND triggers that button's action in one click.
+- **`insertAsChild` prepends**: new children are added at the top of the children list, not appended; ghost chip reflects this placement.
+- **`handleCreateChildFile`**: fetches fresh collection → `removeNode` → `insertAsChild` → `saveCollection` → `setCollection` directly — does NOT call `loadCollection` afterward (which would overwrite the local insert).
+- **Backend orphan sort**: `get_all_md_files` returns files sorted by `st_mtime` descending (newest first) — powers the "Recent" orphan sort mode.
+
+---
+
 ## Known Issues / Dead Code
 
 - `HierarchyView.tsx` and `YAMLModal.tsx` — unused legacy components, safe to ignore
@@ -245,7 +275,5 @@ The backend auto-reloads on Python file changes. Frontend requires a rebuild to 
 ## TODO (planned features, not yet implemented)
 
 1. **Import from mkdocs.yml** — parse the `nav:` section of an existing MkDocs config and import it as a project's collection.yaml
-2. **File preview on hover** — hover a chip to see a popover with the first few lines of the file
-3. **Keyboard-only reorder** — arrow keys navigate selection; left/right nest/unnest works, but cross-level up/down moves are not yet supported
-4. **Bulk multi-select** — select multiple chips and move them as a group
-5. **Search/filter** — find files by name in a large collection (deprioritized by user)
+2. **Keyboard-only reorder** — arrow keys navigate selection; left/right nest/unnest works, but cross-level up/down moves are not yet supported
+3. **Search/filter** — find files by name in a large collection (deprioritized by user)
