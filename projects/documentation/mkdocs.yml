@@ -1,0 +1,9 @@
+nav:
+- Introduction: introduction.md
+- Getting Started: getting-started.md
+- Managing Projects: projects.md
+- Editing Files: editing.md
+- Building Your Hierarchy: hierarchy.md
+- Unlinked Files: unlinked-files.md
+- Import & Export: import-export.md
+- Keyboard Shortcuts: keyboard-shortcuts.md

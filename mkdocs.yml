@@ -1,0 +1,30 @@
+site_name: .mdTree
+site_url: https://rick-suspends.github.io/md-tree/
+site_description: A local markdown hierarchy manager with a built-in editor
+repo_url: https://github.com/rick-suspends/md-tree
+repo_name: rick-suspends/md-tree
+
+docs_dir: projects/documentation/markdowns
+
+theme:
+  name: material
+  palette:
+    primary: custom
+    accent: custom
+  features:
+    - navigation.sections
+    - navigation.top
+    - toc.integrate
+
+extra_css:
+  - stylesheets/extra.css
+
+nav:
+  - Introduction: introduction.md
+  - Getting Started: getting-started.md
+  - Managing Projects: projects.md
+  - Editing Files: editing.md
+  - Building Your Hierarchy: hierarchy.md
+  - Unlinked Files: unlinked-files.md
+  - Import & Export: import-export.md
+  - Keyboard Shortcuts: keyboard-shortcuts.md
