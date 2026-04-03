@@ -2,7 +2,7 @@
 
 ## Opening a file
 
-Click a file chip in the hierarchy or the Unlinked pane to select it, then double-click to open it in the editor. You can also use **⋮ → Edit** from the chip menu.
+Click **⋮** on any file chip in the hierarchy or the Unlinked pane, then choose **View/Edit**.
 
 ## The editor
 

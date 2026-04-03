@@ -4,15 +4,19 @@
 
 ## Importing from MkDocs
 
-1. Copy your `mkdocs.yml` into the project folder at `projects/{name}/mkdocs.yml`
-2. Click **⋮** on the project chip, then **Import from... → MkDocs**
+1. Create a new project in .mdTree for your docs (use **⋮ → Projects → ＋ New project** on the project chip)
+2. Copy your `mkdocs.yml` into the project folder at `projects/{name}/mkdocs.yml`
+3. Copy your markdown files into `projects/{name}/markdowns/`
+4. Click **⋮** on the project chip, then **Import from... → MkDocs**
 
 The hierarchy is built from the `nav:` section of your config. Category-only nodes (sections with no page of their own) are flattened — their children are promoted up one level.
 
 ## Importing from Docusaurus
 
-1. Copy your `sidebars.js` (or `sidebars.ts`) into the project folder at `projects/{name}/sidebars.js`
-2. Click **⋮** on the project chip, then **Import from... → Docusaurus**
+1. Create a new project in .mdTree for your docs (use **⋮ → Projects → ＋ New project** on the project chip)
+2. Copy your `sidebars.js` (or `sidebars.ts`) into the project folder at `projects/{name}/sidebars.js`
+3. Copy your markdown files into `projects/{name}/markdowns/`
+4. Click **⋮** on the project chip, then **Import from... → Docusaurus**
 
 If neither `sidebars.js` nor `sidebars.ts` is found, you will be prompted for the filename.
 

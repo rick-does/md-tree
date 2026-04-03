@@ -19,7 +19,7 @@ There are three ways to move an unlinked file into the hierarchy:
 2. **Double-click** it to add it at the top of the hierarchy
 3. **Select** it (click once) and press the **←** arrow key
 
-To select multiple files, hold Ctrl/Cmd while clicking. The ← key moves all selected files at once.
+To select multiple files, hold Ctrl/Cmd while clicking, or drag a selection rectangle around a group of files. The ← key moves all selected files at once.
 
 ## Sorting unlinked files
 

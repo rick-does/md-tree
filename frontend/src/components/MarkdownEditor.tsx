@@ -112,13 +112,13 @@ export default function MarkdownEditor({ path, content, savedContent, onContentC
       {/* Content */}
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
         {(view === "edit" || view === "split") && (
-          <div style={{ flex: "0 0 559px", minWidth: 0, overflow: "hidden", borderRight: view === "split" ? "1px solid #333" : "none" }}>
+          <div style={{ flex: view === "split" ? "0 0 559px" : 1, minWidth: 0, overflow: "hidden", borderRight: view === "split" ? "1px solid #333" : "none" }}>
             <CodeEditor value={content} onChange={onContentChange} language="markdown" viMode={viMode} />
           </div>
         )}
         {(view === "preview" || view === "split") && (
           <div style={{
-            flex: "0 0 559px", minWidth: 0, overflowY: "auto", padding: "1.5rem 2rem",
+            flex: view === "split" ? "0 0 559px" : 1, minWidth: 0, overflowY: "auto", padding: "1.5rem 2rem",
             background: "#fafafa", color: "#1a1a1a", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
             lineHeight: "1.7",
           }}>
