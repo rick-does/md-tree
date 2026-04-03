@@ -25,6 +25,16 @@ Files that exist in `markdowns/` but aren't placed in the hierarchy yet appear i
 
 **Requirements:** Python 3.12+, Node.js 18+
 
+On first run the start script will automatically create a Python virtual environment and install all dependencies.
+
+**Windows:**
+```bat
+git clone https://github.com/rick-suspends/md-tree.git
+cd md-tree
+start.bat
+```
+
+**Mac / Linux / WSL:**
 ```bash
 git clone https://github.com/rick-suspends/md-tree.git
 cd md-tree
