@@ -20,6 +20,8 @@ export interface ProjectChipProps {
   onExport: (format: "mkdocs" | "docusaurus") => void;
 }
 
+const isDemoMode = import.meta.env.VITE_DEMO_MODE === '1';
+
 export default function ProjectChip({ currentProject, currentProjectTitle, projects, titleMode, setTitleMode, onSwitchProject, onCreateProject, onArchiveProject, onRenameProject, onOpenProjectMd, onRefresh, onCreateFile, onOpenYaml, onImport, onExport }: ProjectChipProps) {
   const [renamingProject, setRenamingProject] = useState(false);
   const [renameProjectValue, setRenameProjectValue] = useState("");
@@ -206,7 +208,7 @@ export default function ProjectChip({ currentProject, currentProjectTitle, proje
                 onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
               >View YAML</div>
 
-              <div
+              {!isDemoMode && <div
                 style={{ ...menuItem, justifyContent: "space-between", position: "relative" }}
                 onMouseEnter={() => setImportSubmenuOpen(true)}
                 onMouseLeave={() => setImportSubmenuOpen(false)}
@@ -228,9 +230,9 @@ export default function ProjectChip({ currentProject, currentProjectTitle, proje
                     ))}
                   </div>
                 )}
-              </div>
+              </div>}
 
-              <div
+              {!isDemoMode && <div
                 style={{ ...menuItem, justifyContent: "space-between", position: "relative" }}
                 onMouseEnter={() => setExportSubmenuOpen(true)}
                 onMouseLeave={() => setExportSubmenuOpen(false)}
@@ -252,7 +254,7 @@ export default function ProjectChip({ currentProject, currentProjectTitle, proje
                     ))}
                   </div>
                 )}
-              </div>
+              </div>}
 
               <div style={{ ...menuItem }}
                 onClick={() => { onRefresh(); setMenuOpen(false); }}
