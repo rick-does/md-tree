@@ -4,7 +4,7 @@ site_description: A local markdown hierarchy manager with a built-in editor
 repo_url: https://github.com/rick-suspends/md-tree
 repo_name: rick-suspends/md-tree
 
-docs_dir: projects/documentation/markdowns
+docs_dir: docs
 
 theme:
   name: material

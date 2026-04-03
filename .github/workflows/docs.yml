@@ -34,6 +34,8 @@ jobs:
 
       - run: pip install mkdocs-material
 
+      - run: cp projects/documentation/markdowns/*.md docs/
+
       - run: mkdocs build
 
       - uses: actions/upload-pages-artifact@v3
