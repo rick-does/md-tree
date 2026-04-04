@@ -21,6 +21,14 @@ Files are organized within a project. Each project has a `markdowns/` folder for
 
 Files that exist in `markdowns/` but aren't placed in the hierarchy yet appear in the **Unlinked** pane. Drag them in, double-click them, or use the arrow key — they won't be forgotten.
 
+## Documentation
+
+Full documentation is available at **[rick-suspends.github.io/md-tree](https://rick-suspends.github.io/md-tree/)**.
+
+## Try it without downloading
+
+A live demo runs at **[md-tree-demo on Lightsail](https://container-service-2.gqceswqwzkchr.us-west-2.cs.amazonlightsail.com/)** — no install required. The demo resets nightly, so feel free to create files, edit content, and explore the hierarchy tools. Import and export are disabled in the demo.
+
 ## Getting started
 
 **Requirements:** [Python 3.12+](https://www.python.org/downloads) and [Node.js LTS](https://nodejs.org) must be installed before running. The start script will handle everything else automatically — virtual environment setup, Python packages, and npm dependencies.
