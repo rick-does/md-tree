@@ -1,0 +1,9 @@
+root:
+- path: 1.md
+  title: '1'
+  order: 0
+  children:
+  - path: 2.md
+    title: '2'
+    order: 0
+    children: []
