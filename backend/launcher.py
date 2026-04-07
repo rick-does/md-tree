@@ -2,9 +2,9 @@ import sys
 import shutil
 import threading
 import time
+import webbrowser
 from pathlib import Path
 import uvicorn
-import webview
 from main import app
 
 PORT = 8003
@@ -22,7 +22,6 @@ USER_DOCS = PROJECTS_DIR / "documentation"
 
 
 def _restore_documentation():
-    """Copy bundled documentation project if missing from user's projects dir."""
     if BUNDLED_DOCS.exists() and not USER_DOCS.exists():
         shutil.copytree(str(BUNDLED_DOCS), str(USER_DOCS))
 
@@ -38,11 +37,17 @@ if __name__ == "__main__":
     t.start()
     time.sleep(1.5)
 
-    window = webview.create_window(
-        "mdTree",
-        f"http://127.0.0.1:{PORT}",
-        width=1400,
-        height=900,
-        min_size=(800, 600),
-    )
-    webview.start()
+    if sys.platform == "linux":
+        # pywebview requires system GTK/Qt which can't be bundled on Linux
+        webbrowser.open(f"http://127.0.0.1:{PORT}")
+        t.join()  # keep process alive until user Ctrl+C's
+    else:
+        import webview
+        window = webview.create_window(
+            "mdTree",
+            f"http://127.0.0.1:{PORT}",
+            width=1400,
+            height=900,
+            min_size=(800, 600),
+        )
+        webview.start()
