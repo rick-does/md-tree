@@ -23,7 +23,7 @@ Files that exist in `markdowns/` but aren't placed in the hierarchy yet appear i
 
 ## Documentation
 
-Full documentation is available at **[rick-suspends.github.io/md-tree](https://rick-suspends.github.io/md-tree/)**.
+Full documentation is available at **[rick-suspends.github.io/md-tree](https://rick-does.github.io/md-tree/)**.
 
 ## Try it without downloading
 
