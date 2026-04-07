@@ -38,8 +38,9 @@ if __name__ == "__main__":
 
     if sys.platform == "linux":
         # pywebview requires system GTK/Qt which can't be bundled on Linux
-        print(f"mdTree running at http://127.0.0.1:{PORT}")
-        print("Press Ctrl+C to stop.")
+        print(f"\n  .mdTree is running at http://127.0.0.1:{PORT}")
+        print(f"  Open that URL in your browser to get started.")
+        print(f"  Press Ctrl+C to stop.\n")
         t.join()  # keep process alive until user Ctrl+C's
     else:
         import webview
