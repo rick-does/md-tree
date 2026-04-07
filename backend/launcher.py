@@ -5,7 +5,7 @@ import time
 import uvicorn
 from main import app
 
-PORT = 8002
+PORT = 8003
 
 
 def _open_browser():
