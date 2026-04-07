@@ -2,7 +2,7 @@
 
 ## Opening a file
 
-Click **⋮** on any file chip in the hierarchy or the Unlinked pane, then choose **View/Edit**.
+Double-click any file chip in the hierarchy to open it. You can also click **⋮** on any file chip in the hierarchy or the Unlinked pane and choose **View/Edit**.
 
 ## The editor
 
@@ -19,7 +19,7 @@ Unsaved changes are indicated by a dot in the editor toolbar.
 
 ## Renaming from the editor
 
-Double-click the filename in the editor toolbar to rename the file inline. This is the same rename as double-clicking the chip in the hierarchy — the file on disk is renamed to match.
+Double-click the filename in the editor toolbar to rename the file inline. The file on disk is renamed to match.
 
 ## Closing the editor
 

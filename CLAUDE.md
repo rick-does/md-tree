@@ -147,6 +147,14 @@ Files in `markdowns/` not referenced in `collection.yaml`. Shown in the orphan p
 4. ~~**Documentation project**~~ — done: 8-page docs at `projects/documentation/`, published to GitHub Pages
 5. ~~**GitHub Pages deployment**~~ — done: MkDocs Material, GitHub Actions workflow
 6. ~~**Lightsail container demo**~~ — done: Docker image with demo mode, daily reset
+7. **Standalone Python executable** — package as a distributable executable (PyInstaller or similar); eliminates web app reliability issues; no public usage so web app is overkill
+8. **Docusaurus sidebar editor plugin** — port the core drag-and-drop hierarchy editing to a Docusaurus plugin; strongest product-market fit (sidebars.js is exactly the pain point)
+
+## Strategic Notes
+
+- The web app will be retired once the standalone executable and Docusaurus plugin are shipped
+- 2.0 features are deferred until portfolio breadth is established — the tree editing feature is the differentiator, not a full MD editor
+- See `rick-does/portfolio` for overall portfolio strategy and priorities
 
 ---
 

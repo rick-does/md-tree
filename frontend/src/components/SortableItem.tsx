@@ -104,6 +104,7 @@ export function SortableItem({ node, depth, isLast, ancestors, selectedPath, tit
   const [childError, setChildError] = useState("");
   const childInputRef = useRef<HTMLInputElement>(null);
   const menuTriggerRef = useRef<HTMLSpanElement>(null);
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -166,7 +167,19 @@ export function SortableItem({ node, depth, isLast, ancestors, selectedPath, tit
               outline: dropAction === "nest" ? "2px solid #4caf5066" : "none",
               outlineOffset: "1px",
             }}
-            onClick={(e) => { if (e.altKey) { fetchMarkdown(currentProject, node.path).then(setPreviewContent).catch(() => {}); } else { onSelect(isSelected ? null : node.path); } }}
+            onClick={(e) => {
+              if (e.altKey) { fetchMarkdown(currentProject, node.path).then(setPreviewContent).catch(() => {}); return; }
+              if (clickTimerRef.current) {
+                clearTimeout(clickTimerRef.current);
+                clickTimerRef.current = null;
+                onOpen(node.path);
+              } else {
+                clickTimerRef.current = setTimeout(() => {
+                  clickTimerRef.current = null;
+                  onSelect(isSelected ? null : node.path);
+                }, 250);
+              }
+            }}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => { setHovered(false); setPreviewContent(null); }}
           >
@@ -187,7 +200,6 @@ export function SortableItem({ node, depth, isLast, ancestors, selectedPath, tit
               ) : (
                 <span
                   style={{ fontSize: "15px", fontWeight: 500, color: "#555", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}
-                  onDoubleClick={(e) => { e.stopPropagation(); setRenaming(true); }}
                   title={label}
                 >
                   {label}
@@ -203,6 +215,7 @@ export function SortableItem({ node, depth, isLast, ancestors, selectedPath, tit
                 {menuOpen && (
                   <div onClick={(e) => e.stopPropagation()} style={{ position: "fixed", top: menuPos?.top ?? 0, left: menuPos?.left ?? 0, zIndex: 200, background: "#fff", border: "1px solid #d0e8f7", borderRadius: "8px", boxShadow: "0 4px 16px rgba(0,0,0,0.12)", minWidth: "150px", overflow: "hidden" }}>
                     <div style={mi} onClick={() => { onOpen(node.path); setMenuOpen(false); }} onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#f5f5f5"; }} onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = ""; }}>View/Edit</div>
+                    <div style={mi} onClick={() => { setMenuOpen(false); setTimeout(() => setRenaming(true), 0); }} onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#f5f5f5"; }} onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = ""; }}>Rename</div>
                     <div style={mi} onClick={() => { setAddingChild(true); setChildName(""); setChildError(""); setMenuOpen(false); setTimeout(() => childInputRef.current?.focus(), 50); }} onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#f5f5f5"; }} onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = ""; }}>Add sub-page</div>
                     <div style={{ ...mi, color: "#c00" }} onClick={() => { onDelete(node.path); setMenuOpen(false); }} onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#fff5f5"; }} onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = ""; }}>Delete</div>
                   </div>

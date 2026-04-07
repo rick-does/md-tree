@@ -29,7 +29,7 @@ Select a file chip by clicking it. The d-pad arrow buttons appear in the left ma
 
 ## Renaming a file
 
-Double-click a file chip label to rename it inline. Spaces are replaced with hyphens automatically. The file on disk is renamed to match.
+Click **⋮** on a file chip and choose **Rename** to rename it inline. Spaces are replaced with hyphens automatically. The file on disk is renamed to match. You can also rename from the editor toolbar — double-click the filename there.
 
 ## Deleting a file
 
