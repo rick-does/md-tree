@@ -454,6 +454,18 @@ export default function Sidebar({ collection, selectedPath, onSelect, onOpen, on
             {/* Left: hierarchy */}
             <div ref={treeRef} style={{ overflowY: "auto", minHeight: 0, paddingTop: "8px", paddingBottom: "8px", outline: "none" }} tabIndex={0} onKeyDown={handleKeyDown}>
 
+              {!currentProject && (
+                <div style={{ color: "#aaa", padding: "16px", fontSize: "13px", textAlign: "center" }}>
+                  No projects yet.{" "}
+                  <span
+                    onClick={onCreateProject}
+                    style={{ color: "#1a6fa8", cursor: "pointer", textDecoration: "underline" }}
+                  >
+                    Create one
+                  </span>
+                </div>
+              )}
+
               {currentProject && (
                 <ProjectChip
                   currentProject={currentProject}

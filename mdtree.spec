@@ -6,6 +6,7 @@ a = Analysis(
     binaries=[],
     datas=[
         ('frontend/dist', 'frontend/dist'),
+        ('projects/documentation', 'projects/documentation'),
     ],
     hiddenimports=[
         'uvicorn.logging',
