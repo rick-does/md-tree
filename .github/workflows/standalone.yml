@@ -55,7 +55,7 @@ jobs:
 
       - name: Zip output (Unix)
         if: runner.os != 'Windows'
-        run: zip -r ${{ matrix.artifact }}.zip dist/md-tree
+        run: cd dist && zip -r ../${{ matrix.artifact }}.zip md-tree
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
