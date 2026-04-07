@@ -21,6 +21,10 @@ a = Analysis(
         'multipart',
         'email.mime.text',
         'email.mime.multipart',
+        'webview',
+        'webview.platforms.winforms',
+        'clr_loader',
+        'pythonnet',
     ],
     hookspath=[],
     runtime_hooks=[],
@@ -40,7 +44,7 @@ exe = EXE(
     debug=False,
     strip=False,
     upx=True,
-    console=True,
+    console=False,
 )
 
 coll = COLLECT(
