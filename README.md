@@ -3,7 +3,6 @@
 [![Build Standalone](https://github.com/rick-does/md-tree/actions/workflows/standalone.yml/badge.svg)](https://github.com/rick-does/md-tree/actions/workflows/standalone.yml)
 [![Docs](https://github.com/rick-does/md-tree/actions/workflows/docs.yml/badge.svg)](https://github.com/rick-does/md-tree/actions/workflows/docs.yml)
 [![Release](https://img.shields.io/github/v/release/rick-does/md-tree)](https://github.com/rick-does/md-tree/releases/latest)
-[![Demo](https://img.shields.io/website?label=demo&url=https%3A%2F%2Fcontainer-service-2.gqceswqwzkchr.us-west-2.cs.amazonlightsail.com%2Fhealth)](https://container-service-2.gqceswqwzkchr.us-west-2.cs.amazonlightsail.com)
 
 A local markdown hierarchy manager for people who work with large collections of `.md` files.
 
