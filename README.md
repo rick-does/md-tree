@@ -1,5 +1,9 @@
 # .mdTree
 
+[![Build Standalone](https://github.com/rick-does/md-tree/actions/workflows/standalone.yml/badge.svg)](https://github.com/rick-does/md-tree/actions/workflows/standalone.yml)
+[![Docs](https://github.com/rick-does/md-tree/actions/workflows/docs.yml/badge.svg)](https://github.com/rick-does/md-tree/actions/workflows/docs.yml)
+[![Release](https://img.shields.io/github/v/release/rick-does/md-tree)](https://github.com/rick-does/md-tree/releases/latest)
+
 A local markdown hierarchy manager for people who work with large collections of `.md` files.
 
 If you've ever maintained a documentation site and found yourself hand-editing a YAML nav file, a `sidebars.js`, or a custom sidebar config every time you added, renamed, or reorganized a page — this tool is for you.
