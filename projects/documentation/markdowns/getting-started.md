@@ -18,11 +18,15 @@ Go to the [Releases page](https://github.com/rick-does/md-tree/releases) and dow
 
 **2. Unzip and run**
 
-Unzip to wherever you want to keep the app and your files. This creates an `md-tree/` folder — open it and double-click `mdtree.exe` (Windows) or `mdtree` (Mac/Linux).
+Unzip to wherever you want to keep the app and your files. This creates an `md-tree/` folder. Open it and run the executable for your platform:
 
-The app opens in its own window. Your projects are stored in a `projects/` folder created automatically inside `md-tree/`.
+**Windows:** Double-click `mdtree.exe`. The app opens in its own window.
 
-**Mac note:** The first time you open the app, right-click it and choose **Open** to bypass the unsigned app warning. After that, double-click works normally.
+**Mac:** Double-click `mdtree`. The app opens in its own window. The first time, right-click and choose **Open** to bypass the unsigned app warning.
+
+**Linux:** Run `./mdtree` from a terminal. The server starts and prints a URL — open it in your browser. Press `Ctrl+C` to stop.
+
+Your projects are stored in a `projects/` folder created automatically inside `md-tree/`.
 
 ---
 
