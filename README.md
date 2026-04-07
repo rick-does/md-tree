@@ -15,34 +15,42 @@ If you've ever maintained a documentation site and found yourself hand-editing a
 - **Multiple projects** — switch between doc sets without losing your place
 - **Runs locally** — your files stay on your machine; no cloud, no accounts
 
-## How it works
+## Download
 
-Files are organized within a project. Each project has a `markdowns/` folder for your `.md` files and a `tree.yaml` that records the hierarchy. You build and rearrange the tree in the UI; the YAML is maintained for you.
+Download the latest standalone app from the [Releases page](https://github.com/rick-does/md-tree/releases) — no Python or Node.js required.
 
-Files that exist in `markdowns/` but aren't placed in the hierarchy yet appear in the **Unlinked** pane. Drag them in, double-click them, or use the arrow key — they won't be forgotten.
+| Platform | File |
+|----------|------|
+| Windows | `mdtree-windows.zip` |
+| Mac | `mdtree-macos.zip` |
+| Linux | `mdtree-linux.zip` |
 
-## Documentation
+Unzip and double-click `mdtree.exe` (Windows) or `mdtree` (Mac/Linux). Your projects are stored in a `projects/` folder created automatically next to the executable.
 
-Full documentation is available at **[rick-suspends.github.io/md-tree](https://rick-does.github.io/md-tree/)**.
+**Mac note:** Right-click → Open the first time to bypass the unsigned app warning.
 
 ## Try it without downloading
 
-A live demo runs at **[md-tree-demo on Lightsail](https://container-service-2.gqceswqwzkchr.us-west-2.cs.amazonlightsail.com/)** — no install required. The demo resets nightly, so feel free to create files, edit content, and explore the hierarchy tools. Import and export are disabled in the demo.
+A live demo runs at **[md-tree demo](https://container-service-2.gqceswqwzkchr.us-west-2.cs.amazonlightsail.com/)** — no install required. The demo resets nightly. Import and export are disabled in the demo.
 
-## Getting started
+## Documentation
 
-**Requirements:** [Python 3.12+](https://www.python.org/downloads) and [Node.js LTS](https://nodejs.org) must be installed before running. The start script will handle everything else automatically — virtual environment setup, Python packages, and npm dependencies.
+Full documentation is available at **[rick-does.github.io/md-tree](https://rick-does.github.io/md-tree/)**.
+
+## Run from source
+
+Requires [Python 3.12+](https://www.python.org/downloads) and [Node.js LTS](https://nodejs.org).
 
 **Windows:**
 ```bat
-git clone https://github.com/rick-suspends/md-tree.git
+git clone https://github.com/rick-does/md-tree.git
 cd md-tree
 start.bat
 ```
 
 **Mac / Linux / WSL:**
 ```bash
-git clone https://github.com/rick-suspends/md-tree.git
+git clone https://github.com/rick-does/md-tree.git
 cd md-tree
 ./start.sh
 ```
@@ -55,3 +63,4 @@ Then open `http://localhost:8002` in your browser.
 - **Frontend:** React, Vite, TypeScript
 - **Editor:** CodeMirror 6
 - **Drag and drop:** dnd-kit
+- **Standalone:** PyInstaller, pywebview
