@@ -1,5 +1,6 @@
 # .mdTree
 
+[![CI](https://github.com/rick-does/md-tree/actions/workflows/ci.yml/badge.svg)](https://github.com/rick-does/md-tree/actions/workflows/ci.yml)
 [![Build Standalone](https://github.com/rick-does/md-tree/actions/workflows/standalone.yml/badge.svg)](https://github.com/rick-does/md-tree/actions/workflows/standalone.yml)
 [![Docs](https://github.com/rick-does/md-tree/actions/workflows/docs.yml/badge.svg)](https://github.com/rick-does/md-tree/actions/workflows/docs.yml)
 [![Release](https://img.shields.io/github/v/release/rick-does/md-tree)](https://github.com/rick-does/md-tree/releases/latest)
