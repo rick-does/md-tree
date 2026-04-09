@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        shell: bash
+        run: pip install -r backend/requirements.txt
+
+      - name: Start server
+        shell: bash
+        run: |
+          cd backend
+          python launcher.py --server &
+
+      - name: Wait for server
+        shell: bash
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:8003/health > /dev/null 2>&1; then
+              echo "Server up after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Server did not start in time" && exit 1
+
+      - name: GET /health
+        shell: bash
+        run: |
+          response=$(curl -sf http://127.0.0.1:8003/health)
+          echo "$response"
+          echo "$response" | grep -q '"ok"'
+
+      - name: GET /api/projects
+        shell: bash
+        run: |
+          response=$(curl -sf http://127.0.0.1:8003/api/projects)
+          echo "$response"
+          echo "$response" | grep -q '\['

@@ -36,8 +36,10 @@ if __name__ == "__main__":
     t.start()
     time.sleep(1.5)
 
-    if sys.platform == "linux":
-        # pywebview requires system GTK/Qt which can't be bundled on Linux
+    server_mode = "--server" in sys.argv or "--no-window" in sys.argv
+    if sys.platform == "linux" or server_mode:
+        # pywebview requires system GTK/Qt which can't be bundled on Linux;
+        # --server / --no-window forces headless mode on any platform (e.g. macOS CI)
         print(f"\n  .mdTree is running at http://127.0.0.1:{PORT}")
         print(f"  Open that URL in your browser to get started.")
         print(f"  Press Ctrl+C to stop.\n")
