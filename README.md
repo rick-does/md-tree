@@ -5,6 +5,8 @@
 [![Docs](https://github.com/rick-does/md-tree/actions/workflows/docs.yml/badge.svg)](https://github.com/rick-does/md-tree/actions/workflows/docs.yml)
 [![Release](https://img.shields.io/github/v/release/rick-does/md-tree)](https://github.com/rick-does/md-tree/releases/latest)
 
+**Note**: This is being ported as the UI for PiTH here: [PiTH repo](https://github.com/rick-does/pith)
+
 A local markdown hierarchy manager for people who work with large collections of `.md` files.
 
 If you've ever maintained a documentation site and found yourself hand-editing a YAML nav file, a `sidebars.js`, or a custom sidebar config every time you added, renamed, or reorganized a page — this tool is for you.
